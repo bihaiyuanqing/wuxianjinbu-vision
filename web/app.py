@@ -3,7 +3,7 @@ import json
 import uuid
 import shutil
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 
@@ -92,6 +92,7 @@ def _format_comment_time(created_at):
     try:
         if created_at.endswith('Z'):
             dt = datetime.fromisoformat(created_at[:-1])
+            dt = dt + timedelta(hours=8)
         else:
             dt = datetime.fromisoformat(created_at)
     except Exception:
