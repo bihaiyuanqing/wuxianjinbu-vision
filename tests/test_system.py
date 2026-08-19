@@ -3,7 +3,8 @@ import sys
 import cv2
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
 
 def test_court_detector():
     print("\n=== Testing Court Detector ===")
@@ -131,7 +132,7 @@ def test_cli():
     
     result = subprocess.run(
         [sys.executable, 'main.py', '--help'],
-        capture_output=True, text=True, cwd=os.path.dirname(os.path.abspath(__file__))
+        capture_output=True, text=True, cwd=PROJECT_ROOT
     )
     
     if result.returncode == 0:

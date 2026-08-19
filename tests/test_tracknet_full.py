@@ -5,7 +5,8 @@ import numpy as np
 import torch
 import time
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'models', 'TrackNetV3'))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, 'models', 'TrackNetV3'))
 
 from utils.general import HEIGHT, WIDTH, get_model, to_img
 
@@ -28,8 +29,8 @@ def predict_location(heatmap):
         return x, y, w, h
 
 def process_video():
-    video_path = "./飞书20260714-202307.mp4"
-    tracknet_path = './models/TrackNetV3/ckpts/ckpts/TrackNet_best.pt'
+    video_path = os.path.join(PROJECT_ROOT, "飞书20260714-202307.mp4")
+    tracknet_path = os.path.join(PROJECT_ROOT, 'models', 'TrackNetV3', 'ckpts', 'ckpts', 'TrackNet_best.pt')
     
     print(f"Loading model...")
     ckpt = torch.load(tracknet_path, map_location='cpu', weights_only=True)
@@ -46,7 +47,7 @@ def process_video():
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     
     img_scaler = (w / WIDTH, h / HEIGHT)
     print(f"Video: {w}x{h}, FPS={fps}, total_frames={total_frames}")

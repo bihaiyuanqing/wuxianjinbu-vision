@@ -4,7 +4,8 @@ import cv2
 import numpy as np
 import torch
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'models', 'TrackNetV3'))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, 'models', 'TrackNetV3'))
 
 from utils.general import HEIGHT, WIDTH, get_model, to_img
 
@@ -25,7 +26,7 @@ def predict_location(heatmap):
         return x, y, w, h
 
 def test_model():
-    tracknet_path = './models/TrackNetV3/ckpts/ckpts/TrackNet_best.pt'
+    tracknet_path = os.path.join(PROJECT_ROOT, 'models', 'TrackNetV3', 'ckpts', 'ckpts', 'TrackNet_best.pt')
     
     print(f"Loading model from: {tracknet_path}")
     
@@ -65,8 +66,8 @@ def test_model():
         return False
 
 def test_video():
-    video_path = "./飞书20260714-202307.mp4"
-    tracknet_path = './models/TrackNetV3/ckpts/ckpts/TrackNet_best.pt'
+    video_path = os.path.join(PROJECT_ROOT, "飞书20260714-202307.mp4")
+    tracknet_path = os.path.join(PROJECT_ROOT, 'models', 'TrackNetV3', 'ckpts', 'ckpts', 'TrackNet_best.pt')
     
     ckpt = torch.load(tracknet_path, map_location='cpu', weights_only=True)
     seq_len = ckpt['param_dict']['seq_len']

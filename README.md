@@ -42,7 +42,7 @@
 ```bash
 # 1. 克隆项目
 git clone <repository-url>
-cd record_flow
+cd wuxianjinbu-vision
 
 # 2. 安装依赖
 pip install -r requirements.txt
@@ -109,7 +109,7 @@ python main.py auto -i /path/to/video.mp4 -o ./output --tracknet
 ## 📁 项目结构
 
 ```
-record_flow/
+wuxianjinbu-vision/
 ├── src/                     # 核心算法模块
 │   ├── segmenter.py         # 视频分段主逻辑
 │   ├── video_cutter.py      # FFmpeg 视频剪辑
