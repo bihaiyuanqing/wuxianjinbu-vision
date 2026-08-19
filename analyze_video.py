@@ -9,7 +9,7 @@ from src.court_detector import CourtDetector
 from src.shuttlecock_tracker import ShuttlecockTracker
 from src.player_pose import PlayerPoseDetector
 
-video_path = "/Users/xuedongfeng/Downloads/ProjectsTrea/record_flow/飞书20260714-202307.mp4"
+video_path = "/Users/xuedongfeng/Downloads/ProjectsTrea/wuxianjinbu-vision/飞书20260714-202307.mp4"
 output_dir = "./analysis_output"
 os.makedirs(output_dir, exist_ok=True)
 
