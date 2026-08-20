@@ -449,8 +449,16 @@ def upload_video():
         return jsonify({'error': 'File type not allowed'}), 400
 
     upload_id = str(uuid.uuid4())
-    filename = file.filename
-    safe_filename = f"{upload_id}_{filename}"
+    original_filename_raw = file.filename
+
+    import re
+    ext = os.path.splitext(original_filename_raw)[1].lower()
+    name_clean = re.sub(r'[\\/:*?"<>|\s]+', '_', wechat_name.strip())
+    name_clean = name_clean[:20]
+    now_cn = datetime.utcnow() + timedelta(hours=8)
+    display_filename = f"{now_cn.strftime('%Y%m%d_%H%M%S')}_{name_clean}{ext}"
+
+    safe_filename = f"{upload_id}_{display_filename}"
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
     file.save(filepath)
 
@@ -491,7 +499,7 @@ def upload_video():
         'wechat_name': wechat_name,
         'task_name': None,
         'user_name': None,
-        'original_filename': filename,
+        'original_filename': display_filename,
         'safe_filename': safe_filename,
         'upload_url': upload_url,
         'upload_size': upload_size,
@@ -527,7 +535,7 @@ def upload_video():
 
     response = {
         'upload_id': upload_id,
-        'filename': filename,
+        'filename': display_filename,
         'safe_filename': safe_filename,
         'url': upload_url,
         'size': upload_size,

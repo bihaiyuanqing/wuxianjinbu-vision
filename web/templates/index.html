@@ -2534,7 +2534,7 @@
 
                     previewVideo.src = currentUpload.url;
                     const infoParts = [
-                        `🎬 录像: ${escapeHtml(currentUpload.filename)}`,
+                        `🎬 录像: ${escapeHtml(truncateFilename(currentUpload.filename))}`,
                         `💾 球包大小: ${formatSize(currentUpload.size)}`,
                         `🙋 归属: ${escapeHtml(currentUpload.wechat_name || wechatName)}`
                     ];
@@ -3107,6 +3107,20 @@
                 .replace(/'/g, '&#39;');
         }
 
+        function truncateFilename(name, maxLen) {
+            maxLen = maxLen || 28;
+            if (!name) return '无名录像';
+            const str = String(name);
+            if (str.length <= maxLen) return str;
+            const dotIdx = str.lastIndexOf('.');
+            if (dotIdx > 0 && dotIdx > str.length - 8) {
+                const ext = str.substring(dotIdx);
+                const base = str.substring(0, dotIdx);
+                return base.substring(0, maxLen - ext.length - 1) + '…' + ext;
+            }
+            return str.substring(0, maxLen - 1) + '…';
+        }
+
         function renderHistoryTaskFilter(names, selectedValue) {
             const opts = ['<option value="">全场次（无差别档案室）</option>']
                 .concat(names.map(n => {
@@ -3145,7 +3159,7 @@
                 const quote = pickCommentQuote(task);
                 const createdAt = formatDate(task.created_at);
                 const name = escapeHtml(task.task_name || task.user_name || task.wechat_name || '神秘打球人');
-                const original = escapeHtml(task.original_filename || task.safe_filename || '无名录像');
+                const original = escapeHtml(truncateFilename(task.original_filename || task.safe_filename || '无名录像'));
                 const upload = escapeHtml(task.upload_url || '');
                 const files = task.output_files || [];
                 const totalDur = files.reduce((s, f) => s + (f.duration || 0), 0);
