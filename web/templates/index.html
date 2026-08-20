@@ -441,14 +441,14 @@
         }
 
         .output-list {
-            max-height: 500px;
+            max-height: 600px;
             overflow-y: auto;
         }
 
         .output-item {
             background: #f8f9fa;
             border-radius: 12px;
-            padding: 14px;
+            padding: 12px;
             margin-bottom: 10px;
             display: flex;
             align-items: center;
@@ -468,17 +468,29 @@
             flex-shrink: 0;
         }
 
-        .output-icon {
-            width: 44px;
-            height: 44px;
+        .output-thumb {
+            width: 80px;
+            height: 56px;
+            border-radius: 8px;
+            object-fit: cover;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
+            flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 20px;
-            flex-shrink: 0;
+            font-size: 24px;
+            overflow: hidden;
+        }
+
+        .output-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .output-icon {
+            display: none;
         }
 
         .output-info {
@@ -498,8 +510,9 @@
 
         .output-meta {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .output-meta-item {
@@ -513,6 +526,47 @@
         .output-meta-item.duration {
             color: #11998e;
             font-weight: 600;
+        }
+
+        .excitement-stars {
+            color: #ffb400;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+
+        .sort-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .sort-btn {
+            padding: 5px 12px;
+            border-radius: 999px;
+            border: 1px solid #e0e0e0;
+            background: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sort-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .merge-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+        }
+
+        .merge-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(17, 153, 142, 0.4) !important;
         }
 
         .download-btn {
@@ -1212,6 +1266,39 @@
             border-color: #e1d4ff;
         }
 
+        .dy-comment-item.is-deleted {
+            opacity: 0.55;
+            background: #f5f5f7;
+            border-color: #e0e0e5;
+        }
+
+        .dy-comment-item.is-deleted .dy-avatar {
+            filter: grayscale(0.7);
+        }
+
+        .deleted-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            background: #999;
+            border-radius: 6px;
+            padding: 1px 7px;
+            margin-left: 6px;
+            vertical-align: middle;
+            letter-spacing: 0.5px;
+        }
+
+        .dy-delete-btn {
+            color: #c0392b !important;
+            font-size: 12px !important;
+        }
+
+        .dy-restore-btn {
+            color: #27ae60 !important;
+            font-size: 12px !important;
+        }
+
         .dy-avatar {
             width: 44px;
             height: 44px;
@@ -1468,7 +1555,7 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">🎯</div>
                 <div class="upload-text">把比赛录像甩这儿，球搭子帮你切名场面</div>
-                <div class="upload-hint">最大支持 <strong>30</strong> 分钟、<strong>600MB</strong>，10 分钟内的视频效果更快更好，3 分钟左右出结果 🏸</div>
+                <div class="upload-hint">最大 <strong>30</strong> 分钟 / <strong>600MB</strong>，10 分钟视频约 3 分钟出片～大家省着点用哦，服务器烧的都是羽毛钱 🪶💰</div>
                 <div class="upload-hint" style="margin-top:6px;color:#8f7cb7;">支持 MP4/MOV/QT/M4V/3GP/AVI/MKV/WEBM…手机 WiFi 上传更稳～</div>
             </div>
             <input type="file" id="fileInput" accept="video/*">
@@ -1499,9 +1586,9 @@
                         ⚙️ 切法配置
                         <span class="form-label-hint">（可选，先练球再出集锦）</span>
                     </label>
-                    <div class="input-row">
-                        <input type="number" id="minDurationInput" min="0" max="600" step="1" value="6" placeholder="例如 6">
-                        <span class="unit">秒以上的片段才入集锦（低质量网前互搓也能省则省 🌚）</span>
+                    <div class="input-row" style="flex-wrap: wrap; align-items: center;">
+                        <input type="number" id="minDurationInput" min="0" max="600" step="1" value="6" placeholder="例如 6" style="flex: 0 0 90px; min-width: 80px;">
+                        <span class="unit" style="white-space: normal; word-break: break-word; overflow-wrap: anywhere; line-height: 1.45; flex: 1 1 0; min-width: 0;">秒以上的片段才入集锦（低质量网前互搓也能省则省 🌚）</span>
                     </div>
                     <div style="font-size:12px;color:#999;margin-top:6px;">
                         💡 经验之谈：5~10 秒以上，大概率是一整段「多拍回合」；填 0 就是保留所有片段，主打一个原汁原味。
@@ -1533,6 +1620,13 @@
                 <button class="btn btn-secondary btn-small" id="resetFilterBtn">🧹 回满状态，全部都要</button>
             </div>
 
+            <div class="sort-bar" id="sortBar" style="display: none;">
+                <span style="font-size:12px;color:#999;font-weight:600;">✨ 排序：</span>
+                <button class="sort-btn active" data-sort="excitement">🔥 精彩度</button>
+                <button class="sort-btn" data-sort="duration">⏱️ 时长优先</button>
+                <button class="sort-btn" data-sort="original">📋 原始顺序</button>
+            </div>
+
             <div class="action-bar" id="actionBar" style="display: none;">
                 <div class="action-bar-left">
                     <div class="checkbox-wrap">
@@ -1542,8 +1636,11 @@
                     <span class="selected-count" id="selectedCount">已圈粉 0 段，准备下载</span>
                 </div>
                 <div class="action-bar-right">
-                    <button class="btn btn-success btn-small" id="downloadSelectedBtn" disabled>
-                        📥 一键抱走勾选（依次弹下载）
+                    <button class="btn btn-success btn-small merge-btn" id="mergeSelectedBtn" disabled>
+                        🎬 合并导出精彩集锦
+                    </button>
+                    <button class="btn btn-secondary btn-small" id="downloadSelectedBtn" disabled style="margin-left:8px;">
+                        📥 逐个下载
                     </button>
                 </div>
             </div>
@@ -1565,7 +1662,7 @@
                     <select id="historyTaskNameFilter">
                         <option value="">全场次（无差别档案室）</option>
                     </select>
-                    <button class="btn btn-secondary btn-small" id="historyRefreshBtn" type="button">🔄 看看又有谁进球了</button>
+                    <button class="btn btn-secondary btn-small" id="historyRefreshBtn" type="button">🔄 刷新看下谁又扣杀了</button>
                 </div>
             </div>
 
@@ -1601,7 +1698,7 @@
                         id="commentContent"
                         class="comment-textarea"
                         maxlength="500"
-                        placeholder="比如：识别超级准！🏸 要是能一键保存到相册就更好啦 💗 或者：3 分钟的视频 10 秒就出结果好惊喜哇 🌟 之类的，都可以告诉我～"></textarea>
+                        placeholder="别光发表情哦～写两句呗（写得越多，进步越快乐）🏸 你的一句话，就是下个版本的功能——主打快乐，顺带进步"></textarea>
                     <div class="emoji-bar" id="emojiBar">
                         <span class="emoji-cell"><button type="button" class="emoji-btn" data-emoji="🫡" title="敬礼 Yes Sir">🫡</button><span class="emoji-label">敬礼</span></span>
                         <span class="emoji-cell"><button type="button" class="emoji-btn" data-emoji="🙋" title="举个小手">🙋</button><span class="emoji-label">举手</span></span>
@@ -1755,7 +1852,10 @@
         let currentUpload = null;
         let currentOutputFiles = [];
         let filteredOutputFiles = [];
+        let originalOutputOrder = [];
+        let currentSortMode = 'excitement';
         let selectedUrls = new Set();
+        let mergedFiles = [];
         let lastHistoryPayload = { tasks: [], task_names: [] };
         let lastCommentsPayload = { comments: [], stats: {} };
         let currentHistoryFilter = '';
@@ -2488,11 +2588,22 @@
             resultCard.style.display = 'none';
             durationWarnEl.style.display = 'none';
             estimateCardEl.style.display = 'none';
+            filterBar.style.display = 'none';
+            sortBar.style.display = 'none';
+            actionBar.style.display = 'none';
+            const mergedContainer = document.getElementById('mergedResultContainer');
+            if (mergedContainer) mergedContainer.remove();
             fileInput.value = '';
             currentUpload = null;
             currentOutputFiles = [];
             filteredOutputFiles = [];
+            originalOutputOrder = [];
+            mergedFiles = [];
             selectedUrls.clear();
+            currentSortMode = 'excitement';
+            document.querySelectorAll('.sort-btn').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-sort') === 'excitement');
+            });
         }
 
         reuploadBtn.addEventListener('click', resetUpload);
@@ -2519,9 +2630,19 @@
             if (e.key === 'Escape') closeTaskNameModal();
         });
 
-        taskNameConfirmBtn && taskNameConfirmBtn.addEventListener('click', async () => {
+        processBtn.addEventListener('click', () => {
+            if (!currentUpload) return;
             if (!requireWechatName('开始处理')) return;
-            const raw = (taskNameInput.value || '').trim() || '神秘打球人';
+            if (wechatName) {
+                startProcessing(wechatName);
+            } else {
+                openTaskNameModal();
+            }
+        });
+
+        async function startProcessing(raw) {
+            if (!currentUpload) return;
+            raw = (raw || '').trim() || wechatName || '神秘打球人';
             try {
                 window.localStorage.setItem('badminton:last_task_name', raw);
             } catch (e) {}
@@ -2551,7 +2672,84 @@
 
             processBtn.disabled = true;
             processSpinner.style.display = 'inline-block';
-            processBtn.innerHTML = '<span class="loading-spinner" id="processSpinner"></span>主裁判正在回放鹰眼…进度拉满中 ⏳';
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '1%';
+            progressText.textContent = '🎯 任务已提交，正在排队处理…';
+            videoPreview.style.display = 'none';
+
+            let eventSource = null;
+            let closed = false;
+
+            function cleanupSSE() {
+                if (eventSource) {
+                    try { eventSource.close(); } catch (e) {}
+                    eventSource = null;
+                }
+            }
+
+            function onTaskUpdate(data) {
+                if (!data) return;
+                const status = data.status || '';
+                const progress = Math.max(0, Math.min(100, Math.round((Number(data.progress) || 0) * 100)));
+                const msg = data.progress_message || '处理中…';
+                progressFill.style.width = progress + '%';
+                progressText.textContent = `${msg} (${progress}%)`;
+
+                if (status === 'completed') {
+                    if (closed) return;
+                    closed = true;
+                    cleanupSSE();
+                    const result = data.result || {};
+                    currentOutputFiles = result.output_files || [];
+                    originalOutputOrder = [...currentOutputFiles];
+                    applySortAndFilter();
+                    selectedUrls.clear();
+                    progressFill.style.width = '100%';
+                    progressText.textContent = '🎉 处理完成！正在加载结果…';
+                    showSuccessToast(`名场面产出完毕！共切出 ${currentOutputFiles.length} 段精华，今晚 B 站素材有了`);
+                    renderStats({ success_count: currentOutputFiles.length });
+                    renderOutputs();
+                    resultCard.style.display = 'block';
+                    progressContainer.style.display = 'none';
+                    videoPreview.style.display = 'block';
+                    if (currentOutputFiles.length > 0) {
+                        filterBar.style.display = 'flex';
+                        sortBar.style.display = 'flex';
+                        actionBar.style.display = 'flex';
+                    }
+                    processBtn.disabled = false;
+                    processSpinner.style.display = 'none';
+                    processBtn.textContent = '再来一球（重切）';
+                    loadHistory();
+                } else if (status === 'failed') {
+                    if (closed) return;
+                    closed = true;
+                    cleanupSSE();
+                    progressContainer.style.display = 'none';
+                    videoPreview.style.display = 'block';
+                    showErrorToast('处理失败：' + (data.error || '未知错误'));
+                    processBtn.disabled = false;
+                    processSpinner.style.display = 'none';
+                    processBtn.textContent = '再来一球（重切）';
+                }
+            }
+
+            function pollTaskStatus() {
+                if (closed) return;
+                fetch(`/api/task/${currentUpload.upload_id}/status`, {
+                    headers: { ...getWechatHeader() }
+                })
+                .then(r => r.json().catch(() => null))
+                .then(data => {
+                    if (data) onTaskUpdate(data);
+                    if (!closed && data && data.status !== 'completed' && data.status !== 'failed') {
+                        setTimeout(pollTaskStatus, 1500);
+                    }
+                })
+                .catch(() => {
+                    if (!closed) setTimeout(pollTaskStatus, 2000);
+                });
+            }
 
             fetch('/api/process', {
                 method: 'POST',
@@ -2570,37 +2768,62 @@
             })
             .then(response => parseJsonOrFriendly(response))
             .then(data => {
-                if (data && data.status === 'completed') {
-                    currentOutputFiles = data.output_files || [];
-                    filteredOutputFiles = [...currentOutputFiles];
-                    selectedUrls.clear();
-                    
-                    showSuccessToast(`名场面产出完毕！共切出 **${data.success_count || 0} 段精华**，今晚 B 站素材有了`);
-                    renderStats(data);
-                    renderOutputs();
-                    resultCard.style.display = 'block';
-                    if (currentOutputFiles.length > 0) {
-                        filterBar.style.display = 'flex';
-                        actionBar.style.display = 'flex';
+                if (data && data.error) {
+                    showErrorToast('提交失败：' + data.error);
+                    cleanupSSE();
+                    processBtn.disabled = false;
+                    processSpinner.style.display = 'none';
+                    processBtn.textContent = '主裁判吹哨，开切！';
+                    progressContainer.style.display = 'none';
+                    videoPreview.style.display = 'block';
+                    return;
+                }
+                if (data && data.status === 'completed' && data.output_files) {
+                    onTaskUpdate({ status: 'completed', progress: 1, result: data });
+                    return;
+                }
+                progressFill.style.width = '2%';
+                progressText.textContent = data.progress_message || '🏸 处理已开始…';
+
+                if (!!window.EventSource) {
+                    try {
+                        const es = new EventSource(`/api/task/${currentUpload.upload_id}/events`);
+                        eventSource = es;
+                        es.onmessage = (e) => {
+                            try {
+                                const d = JSON.parse(e.data);
+                                onTaskUpdate(d);
+                            } catch (err) {
+                                console.warn('SSE parse error', err);
+                            }
+                        };
+                        es.onerror = () => {
+                            cleanupSSE();
+                            if (!closed) pollTaskStatus();
+                        };
+                    } catch (e) {
+                        cleanupSSE();
+                        pollTaskStatus();
                     }
-                    loadHistory();
                 } else {
-                    showErrorToast('哎呀这颗球打框了～错误：' + (data && data.error ? data.error : '主裁判摇了摇头'));
+                    pollTaskStatus();
                 }
             })
             .catch(err => {
-                showErrorToast('处理出错：' + (err && err.message ? err.message : '网络异常'));
-            })
-            .finally(() => {
+                showErrorToast('提交失败：' + (err && err.message ? err.message : '网络异常'));
+                cleanupSSE();
                 processBtn.disabled = false;
                 processSpinner.style.display = 'none';
-                processBtn.textContent = '再来一球（重切）';
+                processBtn.textContent = '主裁判吹哨，开切！';
+                progressContainer.style.display = 'none';
+                videoPreview.style.display = 'block';
             });
-        });
+        }
 
-        processBtn.addEventListener('click', () => {
-            if (!currentUpload) return;
-            openTaskNameModal();
+        taskNameConfirmBtn && taskNameConfirmBtn.addEventListener('click', () => {
+            if (!requireWechatName('开始处理')) return;
+            const raw = (taskNameInput.value || '').trim() || wechatName || '神秘打球人';
+            startProcessing(raw);
         });
 
         function renderStats(data) {
@@ -2643,14 +2866,19 @@
                 return;
             }
 
-            outputList.innerHTML = files.map(file => {
+            outputList.innerHTML = files.map((file, idx) => {
                 const checked = selectedUrls.has(file.url) ? 'checked' : '';
+                const stars = file.excitement_stars || 3;
+                const starHtml = '⭐'.repeat(stars) + '<span style="color:#ddd;">☆</span>'.repeat(5 - stars);
+                const thumbHtml = file.thumbnail_url
+                    ? `<div class="output-thumb"><img src="${file.thumbnail_url}" alt="封面" loading="lazy"></div>`
+                    : `<div class="output-thumb">🎬</div>`;
                 return `
                     <div class="output-item">
-                        <input type="checkbox" class="item-checkbox" data-url="${file.url}" ${checked}>
-                        <div class="output-icon">🎬</div>
+                        <input type="checkbox" class="item-checkbox" data-url="${file.url}" data-name="${file.name}" ${checked}>
+                        ${thumbHtml}
                         <div class="output-info">
-                            <div class="output-name">${file.name}</div>
+                            <div class="output-name">第${idx+1}名 · ${file.name}</div>
                             <div class="output-meta">
                                 <span class="output-meta-item duration">
                                     ⏱️ ${file.duration_str || formatDurationSec(file.duration)}
@@ -2658,6 +2886,7 @@
                                 <span class="output-meta-item">
                                     💾 ${formatSize(file.size)}
                                 </span>
+                                <span class="excitement-stars">${starHtml}</span>
                             </div>
                         </div>
                         <a href="${file.url}" download="${file.name}" class="download-btn" title="单独下载这一段">
@@ -2687,6 +2916,7 @@
             const count = selectedUrls.size;
             selectedCount.textContent = `已圈粉 ${count} 段，准备下载`;
             downloadSelectedBtn.disabled = count === 0;
+            mergeSelectedBtn.disabled = count < 2;
 
             const visible = filteredOutputFiles.filter(f => selectedUrls.has(f.url)).length;
             const totalVisible = filteredOutputFiles.length;
@@ -2712,28 +2942,130 @@
         });
 
         applyFilterBtn.addEventListener('click', () => {
-            const min = viewMinDuration.value ? parseFloat(viewMinDuration.value) : 0;
-            filteredOutputFiles = currentOutputFiles.filter(f => {
-                const d = f.duration || 0;
-                return d >= min;
-            });
+            applySortAndFilter();
             if (filteredOutputFiles.length === 0 && (currentOutputFiles || []).length > 0) {
                 showWarnToast('这阈值设得太狠啦，精彩片段都被过滤光了🌚', 2500);
             } else {
-                showSuccessToast(`筛选出 ${filteredOutputFiles.length} 段「长回合」片段`);
+                const min = viewMinDuration.value ? parseFloat(viewMinDuration.value) : 0;
+                showSuccessToast(`筛选出 ${filteredOutputFiles.length} 段「${min > 0 ? '≥' + min + '秒' : '所有'}」片段`);
             }
             renderOutputs();
         });
 
         resetFilterBtn.addEventListener('click', () => {
             viewMinDuration.value = '';
-            filteredOutputFiles = [...currentOutputFiles];
+            applySortAndFilter();
             renderOutputs();
             showToast('已回满状态，所有片段回来啦 🎉');
         });
 
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.getAttribute('data-sort');
+                currentSortMode = mode;
+                document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applySortAndFilter();
+                renderOutputs();
+            });
+        });
+
+        function applySortAndFilter() {
+            const min = viewMinDuration.value ? parseFloat(viewMinDuration.value) : 0;
+            let files = [...currentOutputFiles];
+            if (min > 0) {
+                files = files.filter(f => (f.duration || 0) >= min);
+            }
+            if (currentSortMode === 'excitement') {
+                files.sort((a, b) => (b.excitement_score || 0) - (a.excitement_score || 0));
+            } else if (currentSortMode === 'duration') {
+                files.sort((a, b) => (b.duration || 0) - (a.duration || 0));
+            } else if (currentSortMode === 'original') {
+                const nameToIndex = {};
+                originalOutputOrder.forEach((f, i) => { nameToIndex[f.name] = i; });
+                files.sort((a, b) => (nameToIndex[a.name] ?? 999) - (nameToIndex[b.name] ?? 999));
+            }
+            filteredOutputFiles = files;
+        }
+
+        mergeSelectedBtn.addEventListener('click', async () => {
+            const toMerge = [...filteredOutputFiles].filter(f => selectedUrls.has(f.url));
+            if (toMerge.length === 0) {
+                showWarnToast('先勾选几段精彩片段再来合并哦～');
+                return;
+            }
+            if (toMerge.length < 2) {
+                showWarnToast('至少勾选2段才能合并呀，一段直接下载就行啦～');
+                return;
+            }
+            if (!currentUpload) {
+                showErrorToast('找不到当前任务信息');
+                return;
+            }
+            const uploadId = currentUpload.upload_id;
+            const originalText = mergeSelectedBtn.textContent;
+            mergeSelectedBtn.disabled = true;
+            mergeSelectedBtn.textContent = '🎬 合并中，请稍候…';
+            showToast(`正在为你合并 ${toMerge.length} 段精彩集锦，大约需要几十秒…`);
+            try {
+                const resp = await fetch(`/api/merge/${uploadId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ files: toMerge.map(f => f.name) })
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.error || '合并失败');
+                }
+                mergedFiles.push({
+                    name: data.merged_file,
+                    url: data.url,
+                    size: data.size,
+                    duration: data.duration,
+                    duration_str: data.duration_str,
+                });
+                showSuccessToast(`🎉 合并完成！共 ${data.segment_count} 段，总时长 ${data.duration_str}，点击下方按钮下载`);
+                renderMergedResult(data);
+            } catch (e) {
+                showErrorToast('合并失败：' + e.message);
+            } finally {
+                mergeSelectedBtn.disabled = false;
+                mergeSelectedBtn.textContent = originalText;
+            }
+        });
+
+        function renderMergedResult(merged) {
+            let container = document.getElementById('mergedResultContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'mergedResultContainer';
+                container.style.marginTop = '16px';
+                container.style.padding = '16px';
+                container.style.background = 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%)';
+                container.style.borderRadius = '12px';
+                container.style.border = '2px solid #a5d6a7';
+                actionBar.parentNode.insertBefore(container, outputList);
+            }
+            container.innerHTML = `
+                <div style="font-weight:700;color:#2e7d32;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:20px;">🎁</span> 你的专属精彩集锦已生成！
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div style="font-size:13px;color:#558b2f;">
+                        共 ${merged.segment_count} 段 · 总时长 ${merged.duration_str} · 大小 ${formatSize(merged.size)}
+                    </div>
+                    <a href="${merged.url}" download="${merged.merged_file}"
+                       style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:linear-gradient(135deg,#11998e,#38ef7d);color:white;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;"
+                       onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='',150)">
+                        📥 下载完整集锦
+                    </a>
+                </div>
+            `;
+            if (typeof window.parseEmojiIfAble === 'function') window.parseEmojiIfAble(container);
+        }
+
         downloadSelectedBtn.addEventListener('click', () => {
-            const toDownload = currentOutputFiles.filter(f => selectedUrls.has(f.url));
+            const toDownload = filteredOutputFiles.filter(f => selectedUrls.has(f.url));
             if (toDownload.length === 0) {
                 showWarnToast('先圈粉（勾选）几段，不然一键抱不走呀～');
                 return;
@@ -2787,7 +3119,7 @@
         }
 
         function taskInitial(task) {
-            const name = task.task_name || task.user_name || '神';
+            const name = task.task_name || task.user_name || task.wechat_name || '神';
             const first = Array.from(String(name).trim()).find(c => c && !/\s/.test(c)) || '神';
             if (/[\u4e00-\u9fa5A-Za-z0-9]/.test(first)) return first.toUpperCase();
             return '🏸';
@@ -2812,15 +3144,21 @@
                 const id = 'dy-' + (task.upload_id || String(idx)) + '-' + Math.random().toString(36).slice(2, 7);
                 const quote = pickCommentQuote(task);
                 const createdAt = formatDate(task.created_at);
-                const name = escapeHtml(task.task_name || task.user_name || '神秘打球人');
+                const name = escapeHtml(task.task_name || task.user_name || task.wechat_name || '神秘打球人');
                 const original = escapeHtml(task.original_filename || task.safe_filename || '无名录像');
                 const upload = escapeHtml(task.upload_url || '');
                 const files = task.output_files || [];
                 const totalDur = files.reduce((s, f) => s + (f.duration || 0), 0);
                 const totalSize = files.reduce((s, f) => s + (f.size || 0), 0);
                 const status = task.status || 'pending';
-                const statusChip = `<span class="chip ${escapeHtml(status)}">${escapeHtml(status)}</span>`;
-                const uploadBtn = upload
+                const isDel = !!task.is_deleted;
+                const canDelete = !isDel && (task.is_owner || task.is_admin);
+                const canRestore = isDel && task.is_admin;
+                const deletedBadge = isDel ? '<span class="deleted-badge">已删除</span>' : '';
+                const statusChip = isDel
+                    ? '<span class="chip" style="background:#999;color:#fff;">已隐藏</span>'
+                    : `<span class="chip ${escapeHtml(status)}">${escapeHtml(status)}</span>`;
+                const uploadBtn = (!isDel && upload)
                     ? `<a class="link-btn secondary" href="${upload}" target="_blank" rel="noopener">📄 看原录像</a>`
                     : '';
                 const previews = (files.length > 4 ? files.slice(0, 4) : files).map(f => `
@@ -2838,20 +3176,26 @@
                         </div>
                     </div>
                 ` : '';
-                const quickDownloadHtml = files.length > 0 ? `
+                const quickDownloadHtml = (!isDel && files.length > 0) ? `
                     <a class="link-btn" href="#" onclick="window._dyDownloadAll(${JSON.stringify(files.map(f => ({url: f.url, name: f.name}))).replace(/"/g, '&quot;')});return false;">📥 一健全下这 ${files.length} 段</a>
                 ` : '';
-                const loadBtnHtml = files.length > 0 ? `
+                const loadBtnHtml = (!isDel && files.length > 0) ? `
                     <button type="button" class="link-btn secondary" onclick="window.loadHistoryTask('${escapeHtml(task.upload_id)}')">🎯 载入到上方结果区</button>
                 ` : '';
+                const deleteBtnHtml = canDelete ? `
+                    <button type="button" class="link-btn dy-delete-btn" onclick="window.deleteHistoryTask('${escapeHtml(task.upload_id)}')">🗑️ 删除</button>
+                ` : '';
+                const restoreBtnHtml = canRestore ? `
+                    <button type="button" class="link-btn dy-restore-btn" onclick="window.restoreHistoryTask('${escapeHtml(task.upload_id)}')">♻️ 恢复</button>
+                ` : '';
                 return `
-                    <div class="dy-comment-item" data-upload-id="${escapeHtml(task.upload_id)}">
+                    <div class="dy-comment-item${isDel ? ' is-deleted' : ''}" data-upload-id="${escapeHtml(task.upload_id)}">
                         <div class="dy-avatar" title="这是 ${name} 的名场面哦～">${taskInitial(task)}</div>
                         <div class="dy-body">
                             <div class="dy-top-row">
                                 <div class="dy-user-wrap">
-                                    <span class="dy-user-name">${name}</span>
-                                    <span class="dy-user-title">往届名场面 #${idx + 1}</span>
+                                    <span class="dy-user-name">${name}${deletedBadge}</span>
+                                    <span class="dy-user-title">往届名场面 #${idx + 1}${task.is_admin ? ' 👑 管理员视角' : ''}</span>
                                 </div>
                                 <span class="dy-time">${createdAt}</span>
                             </div>
@@ -2864,16 +3208,18 @@
                                 ${totalSize ? `<span>💾 总大小 ${formatHumanSize(totalSize)}</span>` : ''}
                                 <span>🙋 归属：${name}</span>
                             </div>
-                            ${files.length > 0 ? `
+                            ${!isDel && files.length > 0 ? `
                                 <div class="dy-files-row">
                                     ${previews}
                                 </div>
                                 ${expandBtnHtml}
-                            ` : `<div class="dy-meta-row"><span style="color:#9b8fcc;">（这一次还没产出片段哦，可能球还在热身🌝）</span></div>`}
+                            ` : (isDel ? '<div class="dy-meta-row"><span style="color:#999;">（此任务已被隐藏，普通用户不可见）</span></div>' : '<div class="dy-meta-row"><span style="color:#9b8fcc;">（这一次还没产出片段哦，可能球还在热身🌝）</span></div>')}
                             <div class="dy-actions-row">
                                 ${uploadBtn}
                                 ${quickDownloadHtml}
                                 ${loadBtnHtml}
+                                ${deleteBtnHtml}
+                                ${restoreBtnHtml}
                             </div>
                         </div>
                     </div>
@@ -2927,7 +3273,11 @@
             currentHistoryFilter = historyTaskNameFilter.value;
             renderHistoryTaskFilter(lastHistoryPayload.task_names, currentHistoryFilter);
             const tasks = currentHistoryFilter
-                ? (lastHistoryPayload.tasks || []).filter(t => t.task_name === currentHistoryFilter)
+                ? (lastHistoryPayload.tasks || []).filter(t =>
+                    t.task_name === currentHistoryFilter ||
+                    t.user_name === currentHistoryFilter ||
+                    t.wechat_name === currentHistoryFilter
+                )
                 : (lastHistoryPayload.tasks || []);
             renderCommentFeed(tasks);
             if (!currentHistoryFilter) {
@@ -2950,7 +3300,8 @@
             const files = task.output_files || [];
             if (files.length > 0) {
                 currentOutputFiles = files;
-                filteredOutputFiles = [...files];
+                originalOutputOrder = [...files];
+                applySortAndFilter();
                 selectedUrls.clear();
                 const totalSize = files.reduce((sum, f) => sum + (f.size || 0), 0);
                 renderStats({
@@ -2960,12 +3311,57 @@
                 renderOutputs();
                 resultCard.style.display = 'block';
                 filterBar.style.display = 'flex';
+                sortBar.style.display = 'flex';
                 actionBar.style.display = 'flex';
                 try { window.scrollTo({ top: document.getElementById('resultCard').offsetTop - 20, behavior: 'smooth' }); } catch (e) {}
                 showSuccessToast(`档案室取件成功！载入 ${files.length} 段前世今生（前世精华🎬）`);
             } else {
                 showWarnToast('这局暂时还没产出片段，先去打一拍再来～');
             }
+        };
+
+        window.deleteHistoryTask = function(uploadId) {
+            if (!uploadId) return;
+            const ok = window.confirm('确定要把这局名场面藏起来吗？\n（只是软删除，自己看不到了，管理员还能恢复哦 🏸）');
+            if (!ok) return;
+            fetch(safeApiUrl(`/api/task/${encodeURIComponent(uploadId)}/delete`), {
+                method: 'POST',
+                headers: { ...getWechatHeader(), 'Content-Type': 'application/json' },
+                ...FETCH_OPTIONS_BASE,
+            })
+                .then(response => parseJsonOrFriendly(response))
+                .then(data => {
+                    if (data && data.ok) {
+                        showToast('🗑️ 已藏好，名场面移入档案室回收站');
+                        loadHistory();
+                    } else {
+                        showErrorToast((data && data.error) || '删除失败');
+                    }
+                })
+                .catch(err => {
+                    showErrorToast('删除失败：' + (err && err.message ? err.message : '网络异常'));
+                });
+        };
+
+        window.restoreHistoryTask = function(uploadId) {
+            if (!uploadId) return;
+            fetch(safeApiUrl(`/api/task/${encodeURIComponent(uploadId)}/restore`), {
+                method: 'POST',
+                headers: { ...getWechatHeader(), 'Content-Type': 'application/json' },
+                ...FETCH_OPTIONS_BASE,
+            })
+                .then(response => parseJsonOrFriendly(response))
+                .then(data => {
+                    if (data && data.ok) {
+                        showToast('♻️ 已恢复，名场面重新可见');
+                        loadHistory();
+                    } else {
+                        showErrorToast((data && data.error) || '恢复失败');
+                    }
+                })
+                .catch(err => {
+                    showErrorToast('恢复失败：' + (err && err.message ? err.message : '网络异常'));
+                });
         };
 
         minDurationInput && minDurationInput.addEventListener('input', () => {

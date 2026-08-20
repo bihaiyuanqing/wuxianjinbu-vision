@@ -50,6 +50,14 @@ def init_db():
             """
         )
         _ensure_column(conn, 'tasks', 'wechat_name', 'TEXT')
+        _ensure_column(conn, 'tasks', 'progress', 'REAL DEFAULT 0.0')
+        _ensure_column(conn, 'tasks', 'progress_message', 'TEXT DEFAULT \'\'')
+        _ensure_column(conn, 'tasks', 'error', 'TEXT')
+        _ensure_column(conn, 'tasks', 'started_at', 'TEXT')
+        _ensure_column(conn, 'tasks', 'total_segments', 'INTEGER DEFAULT 0')
+        _ensure_column(conn, 'tasks', 'result_data', 'TEXT')
+        _ensure_column(conn, 'tasks', 'is_deleted', 'INTEGER DEFAULT 0')
+        _ensure_column(conn, 'tasks', 'deleted_at', 'TEXT')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at DESC)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_tasks_user_name ON tasks(user_name)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_tasks_task_name ON tasks(task_name)')
@@ -69,6 +77,13 @@ def init_db():
         )
         conn.execute('CREATE INDEX IF NOT EXISTS idx_comments_created ON comments(created_at DESC)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_comments_wechat_name ON comments(wechat_name)')
+
+        conn.execute(
+            "UPDATE tasks SET task_name = wechat_name WHERE (task_name IS NULL OR task_name = '') AND wechat_name IS NOT NULL AND wechat_name <> ''"
+        )
+        conn.execute(
+            "UPDATE tasks SET user_name = wechat_name WHERE (user_name IS NULL OR user_name = '') AND wechat_name IS NOT NULL AND wechat_name <> ''"
+        )
 
 
 def create_task(payload):
@@ -113,29 +128,94 @@ def delete_task(upload_id):
         conn.execute('DELETE FROM tasks WHERE upload_id = ?', (upload_id,))
 
 
-def update_task_completed(upload_id, status, output_count, completed_at=None):
-    if completed_at is None:
-        completed_at = datetime.utcnow().isoformat() + 'Z'
+def soft_delete_task(upload_id):
+    now = datetime.utcnow().isoformat() + 'Z'
     with get_conn() as conn:
         conn.execute(
-            'UPDATE tasks SET status=?, output_count=?, completed_at=? WHERE upload_id=?',
-            (status, output_count, completed_at, upload_id),
+            'UPDATE tasks SET is_deleted=1, deleted_at=? WHERE upload_id=?',
+            (now, upload_id),
         )
 
 
-def list_tasks(user_name=None, task_name=None, days=None, wechat_name=None):
+def restore_task(upload_id):
+    with get_conn() as conn:
+        conn.execute(
+            'UPDATE tasks SET is_deleted=0, deleted_at=NULL WHERE upload_id=?',
+            (upload_id,),
+        )
+
+
+def update_task_completed(upload_id, status, output_count, completed_at=None, result_data=None, error=None):
+    if completed_at is None:
+        completed_at = datetime.utcnow().isoformat() + 'Z'
+    with get_conn() as conn:
+        if result_data is not None:
+            import json
+            conn.execute(
+                'UPDATE tasks SET status=?, output_count=?, completed_at=?, result_data=?, error=? WHERE upload_id=?',
+                (status, output_count, completed_at, json.dumps(result_data, ensure_ascii=False), error, upload_id),
+            )
+        else:
+            conn.execute(
+                'UPDATE tasks SET status=?, output_count=?, completed_at=?, error=? WHERE upload_id=?',
+                (status, output_count, completed_at, error, upload_id),
+            )
+
+
+def update_task_progress(upload_id, progress, message='', status=None, total_segments=None):
+    with get_conn() as conn:
+        updates = ['progress=?', 'progress_message=?']
+        params = [float(progress), message]
+        if status is not None:
+            updates.append('status=?')
+            params.append(status)
+        if status == 'processing':
+            updates.append('started_at=COALESCE(started_at, ?)')
+            params.append(datetime.utcnow().isoformat() + 'Z')
+        if total_segments is not None:
+            updates.append('total_segments=?')
+            params.append(int(total_segments))
+        params.append(upload_id)
+        conn.execute(
+            f'UPDATE tasks SET {", ".join(updates)} WHERE upload_id=?',
+            params,
+        )
+
+
+def update_task_started(upload_id, task_name=None, user_name=None):
+    started_at = datetime.utcnow().isoformat() + 'Z'
+    with get_conn() as conn:
+        updates = ['status=?', 'started_at=?', 'progress=?', 'progress_message=?']
+        params = ['processing', started_at, 0.01, '正在准备处理视频…']
+        if task_name is not None:
+            updates.append('task_name=?')
+            params.append(task_name)
+        if user_name is not None:
+            updates.append('user_name=?')
+            params.append(user_name)
+        params.append(upload_id)
+        conn.execute(
+            f'UPDATE tasks SET {", ".join(updates)} WHERE upload_id=?',
+            params,
+        )
+
+
+def list_tasks(user_name=None, task_name=None, days=None, wechat_name=None, include_deleted=False, show_all=False):
     sql = 'SELECT * FROM tasks'
     where = []
     params = []
+    if not show_all:
+        if not include_deleted:
+            where.append('is_deleted = 0')
+        if wechat_name:
+            where.append('wechat_name = ?')
+            params.append(wechat_name)
     if user_name:
         where.append('user_name = ?')
         params.append(user_name)
     if task_name:
-        where.append('task_name = ?')
-        params.append(task_name)
-    if wechat_name:
-        where.append('wechat_name = ?')
-        params.append(wechat_name)
+        where.append('(task_name = ? OR user_name = ? OR wechat_name = ?)')
+        params.extend([task_name, task_name, task_name])
     if days:
         cutoff = (datetime.utcnow() - timedelta(days=int(days))).isoformat() + 'Z'
         where.append('created_at >= ?')
@@ -148,12 +228,18 @@ def list_tasks(user_name=None, task_name=None, days=None, wechat_name=None):
     return [dict(r) for r in rows]
 
 
-def list_task_names():
+def list_task_names(include_deleted=False):
     with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT DISTINCT task_name FROM tasks WHERE task_name IS NOT NULL AND task_name <> '' ORDER BY task_name ASC"
-        ).fetchall()
-    return [r['task_name'] for r in rows]
+        sql = (
+            "SELECT DISTINCT COALESCE(NULLIF(task_name, ''), NULLIF(user_name, ''), NULLIF(wechat_name, '')) AS name "
+            "FROM tasks WHERE COALESCE(NULLIF(task_name, ''), NULLIF(user_name, ''), NULLIF(wechat_name, '')) IS NOT NULL "
+        )
+        params = []
+        if not include_deleted:
+            sql += "AND is_deleted = 0 "
+        sql += "ORDER BY name ASC"
+        rows = conn.execute(sql, params).fetchall()
+    return [r['name'] for r in rows]
 
 
 def add_comment(wechat_name, rating, content):
