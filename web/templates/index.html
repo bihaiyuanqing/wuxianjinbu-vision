@@ -2504,12 +2504,10 @@
                 if (!ok) return;
             }
             commentSubmitBtn.disabled = true;
-            fetch(safeApiUrl('/api/comments'), {
-                ...FETCH_OPTIONS_BASE,
+            authedFetch(safeApiUrl('/api/comments'), {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    ...getWechatHeader()
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     rating: commentRating,
@@ -2786,6 +2784,20 @@
             });
 
             xhr.onload = () => {
+                if (xhr.status === 401) {
+                    let needLogin = false;
+                    try {
+                        const payload = JSON.parse(xhr.responseText);
+                        needLogin = !!(payload && payload.need_login);
+                    } catch (e) {}
+                    if (needLogin) {
+                        clearAuth();
+                        openIdentityModal(false);
+                        showWarnToast('登录状态已失效，请重新登录哦 🔐');
+                        resetUpload();
+                        return;
+                    }
+                }
                 if (xhr.status === 200) {
                     currentUpload = JSON.parse(xhr.responseText);
 
@@ -3011,11 +3023,10 @@
                 });
             }
 
-            fetch('/api/process', {
+            authedFetch('/api/process', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    ...getWechatHeader()
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     upload_id: currentUpload.upload_id,
@@ -3269,13 +3280,14 @@
             mergeSelectedBtn.textContent = '🎬 合并中，请稍候…';
             showToast(`正在为你合并 ${toMerge.length} 段精彩集锦，大约需要几十秒…`);
             try {
-                const resp = await fetch(`/api/merge/${uploadId}`, {
+                const resp = await authedFetch(`/api/merge/${uploadId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ files: toMerge.map(f => f.name) })
                 });
                 const data = await resp.json();
                 if (!resp.ok) {
+                    if (resp.status === 401) return;
                     throw new Error(data.error || '合并失败');
                 }
                 mergedFiles.push({
@@ -3601,10 +3613,9 @@
             if (!uploadId) return;
             const ok = window.confirm('确定要把这局名场面藏起来吗？\n（只是软删除，自己看不到了，管理员还能恢复哦 🏸）');
             if (!ok) return;
-            fetch(safeApiUrl(`/api/task/${encodeURIComponent(uploadId)}/delete`), {
+            authedFetch(safeApiUrl(`/api/task/${encodeURIComponent(uploadId)}/delete`), {
                 method: 'POST',
-                headers: { ...getWechatHeader(), 'Content-Type': 'application/json' },
-                ...FETCH_OPTIONS_BASE,
+                headers: { 'Content-Type': 'application/json' },
             })
                 .then(response => parseJsonOrFriendly(response))
                 .then(data => {
@@ -3622,10 +3633,9 @@
 
         window.restoreHistoryTask = function(uploadId) {
             if (!uploadId) return;
-            fetch(safeApiUrl(`/api/task/${encodeURIComponent(uploadId)}/restore`), {
+            authedFetch(safeApiUrl(`/api/task/${encodeURIComponent(uploadId)}/restore`), {
                 method: 'POST',
-                headers: { ...getWechatHeader(), 'Content-Type': 'application/json' },
-                ...FETCH_OPTIONS_BASE,
+                headers: { 'Content-Type': 'application/json' },
             })
                 .then(response => parseJsonOrFriendly(response))
                 .then(data => {
@@ -3682,9 +3692,7 @@
                     });
                     const data = await resp.json();
                     if (data && data.user) {
-                        wechatName = data.user.wechat_name;
-                        isAdmin = !!data.user.is_admin;
-                        renderIdentity();
+                        saveAuth(data.user.wechat_name, authToken, data.user.is_admin);
                     } else {
                         clearAuth();
                     }
@@ -3714,17 +3722,26 @@
         }
 
         async function authedFetch(url, options = {}) {
-            options.headers = { ...(options.headers || {}), ...getAuthHeader() };
-            const resp = await fetch(url, options);
+            const mergedOptions = {
+                ...FETCH_OPTIONS_BASE,
+                ...options,
+                headers: {
+                    ...(options.headers || {}),
+                    ...getAuthHeader()
+                }
+            };
+            const resp = await fetch(url, mergedOptions);
             if (resp.status === 401) {
+                let needLogin = false;
                 try {
                     const data = await resp.clone().json();
-                    if (data && data.need_login) {
-                        clearAuth();
-                        openIdentityModal(false);
-                        showWarnToast('请先登录后再操作哦 🔐');
-                    }
+                    needLogin = !!(data && data.need_login);
                 } catch (e) {}
+                if (needLogin) {
+                    clearAuth();
+                    openIdentityModal(false);
+                    showWarnToast('登录状态已失效，请重新登录哦 🔐');
+                }
             }
             return resp;
         }

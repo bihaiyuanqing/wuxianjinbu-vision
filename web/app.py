@@ -88,18 +88,6 @@ def _get_current_user():
         user = get_user_by_token(token)
         if user:
             return user
-    header_name = request.headers.get('X-Wechat-Name') or ''
-    try:
-        from urllib.parse import unquote
-        header_name = unquote(header_name or '').strip()
-    except Exception:
-        header_name = header_name.strip()
-    if not header_name and not request.is_json and request.method == 'POST' and request.form:
-        header_name = (request.form.get('wechat_name') or '').strip()
-    if header_name:
-        u = get_user_by_token(header_name)
-        if u:
-            return u
     return None
 
 
@@ -110,23 +98,15 @@ def _require_login():
     return user['wechat_name']
 
 
+def _require_wechat_name():
+    return _require_login()
+
+
 def _get_wechat_name_compat():
     user = _get_current_user()
     if user:
         return user['wechat_name']
-    header_value = request.headers.get('X-Wechat-Name') or ''
-    try:
-        from urllib.parse import unquote
-        header_value = unquote(header_value or '').strip()
-    except Exception:
-        header_value = header_value.strip()
-    value = header_value or (request.args.get('wechat_name') or '').strip()
-    if not value and request.is_json:
-        body = request.get_json(silent=True) or {}
-        value = (body.get('wechat_name') or '').strip()
-    if not value and request.method == 'POST' and request.form:
-        value = (request.form.get('wechat_name') or '').strip()
-    return value or None
+    return None
 
 
 init_db()
