@@ -1820,6 +1820,17 @@
         </div>
     </div>
 
+    <div class="modal-mask" id="confirmModal" style="display:none;">
+        <div class="modal-card" style="max-width:380px;">
+            <div class="modal-title">🤔 确认一下</div>
+            <div class="modal-desc" id="confirmModalText" style="white-space:pre-line;line-height:1.7;"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="confirmCancelBtn" type="button">取消</button>
+                <button class="btn btn-primary" id="confirmOkBtn" type="button">确定</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         window.twemoji = null;
         window.__twemojiLoadFailed = false;
@@ -2490,7 +2501,7 @@
             if (commentCounterEl) commentCounterEl.textContent = commentContentEl.value.length;
         });
 
-        commentSubmitBtn && commentSubmitBtn.addEventListener('click', () => {
+        commentSubmitBtn && commentSubmitBtn.addEventListener('click', async () => {
             if (!requireWechatName('留言')) return;
             if (!commentContentEl) return;
             const content = (commentContentEl.value || '').trim();
@@ -2500,7 +2511,7 @@
                 return;
             }
             if (commentRating < 1) {
-                const ok = window.confirm('还没打分哦，确定就这么发送吗？(也可以用星星点一下评分 ⭐️)');
+                const ok = await showConfirm('还没打分哦，确定就这么发送吗？\n(也可以用星星点一下评分 ⭐️)');
                 if (!ok) return;
             }
             commentSubmitBtn.disabled = true;
@@ -2564,6 +2575,34 @@
             const endings = ['～申诉（重试）一下？', '～先歇 10 秒再战～', '～主裁判吹犯规了～'];
             const ending = endings[Math.floor(Math.random() * endings.length)];
             showToast('💥 ' + message + ending, duration);
+        }
+
+        function showConfirm(message) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirmModal');
+                const textEl = document.getElementById('confirmModalText');
+                const okBtn = document.getElementById('confirmOkBtn');
+                const cancelBtn = document.getElementById('confirmCancelBtn');
+                textEl.textContent = message;
+                const cleanup = (result) => {
+                    modal.style.display = 'none';
+                    okBtn.removeEventListener('click', onOk);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    modal.removeEventListener('click', onMask);
+                    document.removeEventListener('keydown', onKey);
+                    resolve(result);
+                };
+                const onOk = () => cleanup(true);
+                const onCancel = () => cleanup(false);
+                const onMask = (e) => { if (e.target === modal) cleanup(false); };
+                const onKey = (e) => { if (e.key === 'Escape') cleanup(false); if (e.key === 'Enter') cleanup(true); };
+                okBtn.addEventListener('click', onOk);
+                cancelBtn.addEventListener('click', onCancel);
+                modal.addEventListener('click', onMask);
+                document.addEventListener('keydown', onKey);
+                modal.style.display = 'flex';
+                setTimeout(() => okBtn.focus(), 50);
+            });
         }
 
         async function parseJsonOrFriendly(response) {
@@ -2731,7 +2770,7 @@
                 probeVideo.addEventListener('error', () => finish(0), { once: true });
                 setTimeout(() => finish(0), 8000);
             });
-            durationPromise.then((preSeconds) => {
+            durationPromise.then(async (preSeconds) => {
                 if (preSeconds > 0) {
                     if (preSeconds > hardMaxSeconds) {
                         showWarnToast(`视频时长 ${Math.round(preSeconds / 60 * 10) / 10} 分钟，超过 ${Math.round(hardMaxSeconds / 60)} 分钟硬上限，请裁剪后再上传`);
@@ -2740,7 +2779,7 @@
                     }
                     const preMinutes = Math.ceil(preSeconds / 60);
                     if (preMinutes > recommendedMinutes) {
-                        const ok = window.confirm(
+                        const ok = await showConfirm(
                             `这盘视频大概 ${Math.round(preSeconds / 60 * 10) / 10} 分钟。\n${recommendedMinutes} 分钟以内的视频处理更快更稳（约 3 分钟出结果），超过后处理时间会变长。\n是否仍然继续上传？`
                         );
                         if (!ok) {
@@ -2932,7 +2971,7 @@
                     '',
                     '现在开始处理吗？这段时间可以喝口水擦擦汗 💦'
                 ].join('\n');
-                const go = window.confirm(prompt);
+                const go = await showConfirm(prompt);
                 if (!go) {
                     showToast('已取消，随时可以再次「开切」～');
                     return;
@@ -3609,9 +3648,9 @@
             }
         };
 
-        window.deleteHistoryTask = function(uploadId) {
+        window.deleteHistoryTask = async function(uploadId) {
             if (!uploadId) return;
-            const ok = window.confirm('确定要把这局名场面藏起来吗？\n（只是软删除，自己看不到了，管理员还能恢复哦 🏸）');
+            const ok = await showConfirm('确定要把这局名场面藏起来吗？\n（只是软删除，自己看不到了，管理员还能恢复哦 🏸）');
             if (!ok) return;
             authedFetch(safeApiUrl(`/api/task/${encodeURIComponent(uploadId)}/delete`), {
                 method: 'POST',
