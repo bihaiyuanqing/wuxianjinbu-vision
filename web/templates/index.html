@@ -2216,7 +2216,9 @@
                     return;
                 }
                 pendingWechatName = value;
+                const originalText = identityConfirmBtn.textContent;
                 identityConfirmBtn.disabled = true;
+                identityConfirmBtn.textContent = '⏳ 查找中…';
                 try {
                     const resp = await fetch(safeApiUrl('/api/auth/check'), {
                         ...FETCH_OPTIONS_BASE,
@@ -2232,6 +2234,7 @@
                     }
                 } catch (e) {
                     showErrorToast('网络错误，请重试');
+                    identityConfirmBtn.textContent = originalText;
                 } finally {
                     identityConfirmBtn.disabled = false;
                 }
@@ -2243,6 +2246,7 @@
                     return;
                 }
                 identityConfirmBtn.disabled = true;
+                identityConfirmBtn.textContent = '⏳ 登录中…';
                 try {
                     const resp = await fetch(safeApiUrl('/api/auth/login'), {
                         ...FETCH_OPTIONS_BASE,
@@ -2253,6 +2257,7 @@
                     const data = await resp.json();
                     if (!resp.ok) {
                         showWarnToast(data.error || '登录失败');
+                        identityConfirmBtn.textContent = '登录 🏸';
                         return;
                     }
                     saveAuth(pendingWechatName, data.token, data.user && data.user.is_admin);
@@ -2262,6 +2267,7 @@
                     loadComments();
                 } catch (e) {
                     showErrorToast('网络错误，请重试');
+                    identityConfirmBtn.textContent = '登录 🏸';
                 } finally {
                     identityConfirmBtn.disabled = false;
                 }
@@ -2279,6 +2285,7 @@
                     return;
                 }
                 identityConfirmBtn.disabled = true;
+                identityConfirmBtn.textContent = '⏳ 注册中…';
                 try {
                     const resp = await fetch(safeApiUrl('/api/auth/register'), {
                         ...FETCH_OPTIONS_BASE,
@@ -2289,6 +2296,7 @@
                     const data = await resp.json();
                     if (!resp.ok) {
                         showWarnToast(data.error || '注册失败');
+                        identityConfirmBtn.textContent = '完成注册 🎉';
                         return;
                     }
                     saveAuth(pendingWechatName, data.token, data.user && data.user.is_admin);
@@ -2298,6 +2306,7 @@
                     loadComments();
                 } catch (e) {
                     showErrorToast('网络错误，请重试');
+                    identityConfirmBtn.textContent = '完成注册 🎉';
                 } finally {
                     identityConfirmBtn.disabled = false;
                 }
@@ -2675,6 +2684,7 @@
         }
 
         uploadArea && uploadArea.addEventListener('click', () => {
+            if (!requireLogin('上传视频')) return;
             if (fileInput) fileInput.click();
         });
 
@@ -2695,6 +2705,7 @@
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
+            if (!requireLogin('上传视频')) return;
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFile(files[0]);
