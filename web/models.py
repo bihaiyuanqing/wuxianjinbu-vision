@@ -1,12 +1,19 @@
 import os
 import sqlite3
+import uuid
 from datetime import datetime, timedelta
 from contextlib import contextmanager
+from werkzeug.security import generate_password_hash, check_password_hash
 
 DB_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.getenv('DATA_DIR', DB_DIR)
 os.makedirs(DATA_DIR, exist_ok=True)
 DB_PATH = os.getenv('DB_PATH', os.path.join(DATA_DIR, 'badminton.db'))
+
+ADMIN_WECHAT_NAME = '行遇书'
+ADMIN_DEFAULT_PASSWORD = 'XingYuShu@2026'
+
+_token_store = {}
 
 
 @contextmanager
@@ -58,6 +65,7 @@ def init_db():
         _ensure_column(conn, 'tasks', 'result_data', 'TEXT')
         _ensure_column(conn, 'tasks', 'is_deleted', 'INTEGER DEFAULT 0')
         _ensure_column(conn, 'tasks', 'deleted_at', 'TEXT')
+        _ensure_column(conn, 'tasks', 'is_private', 'INTEGER DEFAULT 0')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at DESC)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_tasks_user_name ON tasks(user_name)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_tasks_task_name ON tasks(task_name)')
@@ -79,11 +87,110 @@ def init_db():
         conn.execute('CREATE INDEX IF NOT EXISTS idx_comments_wechat_name ON comments(wechat_name)')
 
         conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                wechat_name TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                is_admin INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+
+        conn.execute(
             "UPDATE tasks SET task_name = wechat_name WHERE (task_name IS NULL OR task_name = '') AND wechat_name IS NOT NULL AND wechat_name <> ''"
         )
         conn.execute(
             "UPDATE tasks SET user_name = wechat_name WHERE (user_name IS NULL OR user_name = '') AND wechat_name IS NOT NULL AND wechat_name <> ''"
         )
+        conn.execute(
+            "UPDATE tasks SET is_private = 0 WHERE is_private IS NULL"
+        )
+
+        _ensure_admin_exists(conn)
+
+
+def _ensure_admin_exists(conn):
+    row = conn.execute('SELECT id FROM users WHERE wechat_name = ?', (ADMIN_WECHAT_NAME,)).fetchone()
+    if not row:
+        now = datetime.utcnow().isoformat() + 'Z'
+        conn.execute(
+            'INSERT INTO users (wechat_name, password_hash, is_admin, created_at) VALUES (?, ?, 1, ?)',
+            (ADMIN_WECHAT_NAME, generate_password_hash(ADMIN_DEFAULT_PASSWORD), now)
+        )
+
+
+def user_exists(wechat_name):
+    with get_conn() as conn:
+        row = conn.execute('SELECT id FROM users WHERE wechat_name = ?', (wechat_name,)).fetchone()
+    return row is not None
+
+
+def create_user(wechat_name, password):
+    if not wechat_name or not password:
+        return None
+    with get_conn() as conn:
+        try:
+            now = datetime.utcnow().isoformat() + 'Z'
+            is_admin = 1 if wechat_name == ADMIN_WECHAT_NAME else 0
+            conn.execute(
+                'INSERT INTO users (wechat_name, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?)',
+                (wechat_name, generate_password_hash(password), is_admin, now)
+            )
+        except sqlite3.IntegrityError:
+            return None
+        row = conn.execute('SELECT * FROM users WHERE wechat_name = ?', (wechat_name,)).fetchone()
+    return dict(row) if row else None
+
+
+def verify_user(wechat_name, password):
+    with get_conn() as conn:
+        row = conn.execute('SELECT * FROM users WHERE wechat_name = ?', (wechat_name,)).fetchone()
+    if not row:
+        return None
+    if not check_password_hash(row['password_hash'], password):
+        return None
+    return dict(row)
+
+
+def get_user_by_name(wechat_name):
+    if not wechat_name:
+        return None
+    with get_conn() as conn:
+        row = conn.execute('SELECT * FROM users WHERE wechat_name = ?', (wechat_name,)).fetchone()
+    return dict(row) if row else None
+
+
+def create_token(wechat_name):
+    token = uuid.uuid4().hex
+    _token_store[token] = {
+        'wechat_name': wechat_name,
+        'created_at': datetime.utcnow()
+    }
+    return token
+
+
+def get_user_by_token(token):
+    if not token:
+        return None
+    data = _token_store.get(token)
+    if not data:
+        return None
+    if datetime.utcnow() - data['created_at'] > timedelta(days=7):
+        del _token_store[token]
+        return None
+    return get_user_by_name(data['wechat_name'])
+
+
+def revoke_token(token):
+    if token in _token_store:
+        del _token_store[token]
+
+
+def is_admin(wechat_name):
+    user = get_user_by_name(wechat_name)
+    return bool(user and user.get('is_admin'))
 
 
 def create_task(payload):
@@ -92,8 +199,8 @@ def create_task(payload):
             """
             INSERT INTO tasks (upload_id, user_name, task_name, original_filename, safe_filename,
                                upload_url, upload_size, output_dir, min_duration, status,
-                               output_count, created_at, wechat_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                               output_count, created_at, wechat_name, is_private)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload['upload_id'],
@@ -109,6 +216,7 @@ def create_task(payload):
                 payload.get('output_count', 0),
                 datetime.utcnow().isoformat() + 'Z',
                 payload.get('wechat_name'),
+                1 if payload.get('is_private') else 0,
             ),
         )
         return cur.lastrowid
@@ -121,6 +229,21 @@ def get_task(upload_id):
             (upload_id,),
         ).fetchone()
     return dict(row) if row else None
+
+
+def can_view_task(task, current_user_name):
+    if not task:
+        return False
+    if is_admin(current_user_name):
+        return True
+    owner = task.get('wechat_name')
+    if owner == current_user_name:
+        return True
+    if task.get('is_deleted'):
+        return False
+    if task.get('is_private'):
+        return False
+    return True
 
 
 def delete_task(upload_id):
@@ -200,16 +323,24 @@ def update_task_started(upload_id, task_name=None, user_name=None):
         )
 
 
-def list_tasks(user_name=None, task_name=None, days=None, wechat_name=None, include_deleted=False, show_all=False):
+def list_tasks(user_name=None, task_name=None, days=None, wechat_name=None, include_deleted=False, show_all=False, current_user=None):
     sql = 'SELECT * FROM tasks'
     where = []
     params = []
-    if not show_all:
+
+    is_admin_user = is_admin(current_user) if current_user else False
+
+    if show_all and is_admin_user:
+        pass
+    else:
         if not include_deleted:
             where.append('is_deleted = 0')
-        if wechat_name:
-            where.append('wechat_name = ?')
-            params.append(wechat_name)
+        if current_user:
+            where.append('(wechat_name = ? OR is_private = 0)')
+            params.append(current_user)
+        else:
+            where.append('is_private = 0')
+
     if user_name:
         where.append('user_name = ?')
         params.append(user_name)
@@ -228,15 +359,22 @@ def list_tasks(user_name=None, task_name=None, days=None, wechat_name=None, incl
     return [dict(r) for r in rows]
 
 
-def list_task_names(include_deleted=False):
+def list_task_names(include_deleted=False, current_user=None):
+    is_admin_user = is_admin(current_user) if current_user else False
     with get_conn() as conn:
         sql = (
             "SELECT DISTINCT COALESCE(NULLIF(task_name, ''), NULLIF(user_name, ''), NULLIF(wechat_name, '')) AS name "
             "FROM tasks WHERE COALESCE(NULLIF(task_name, ''), NULLIF(user_name, ''), NULLIF(wechat_name, '')) IS NOT NULL "
         )
         params = []
-        if not include_deleted:
-            sql += "AND is_deleted = 0 "
+        if not is_admin_user:
+            if not include_deleted:
+                sql += "AND is_deleted = 0 "
+            if current_user:
+                sql += "AND (wechat_name = ? OR is_private = 0) "
+                params.append(current_user)
+            else:
+                sql += "AND is_private = 0 "
         sql += "ORDER BY name ASC"
         rows = conn.execute(sql, params).fetchall()
     return [r['name'] for r in rows]

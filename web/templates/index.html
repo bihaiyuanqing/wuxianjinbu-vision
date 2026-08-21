@@ -1772,24 +1772,32 @@
         <div class="modal-dialog">
             <div class="identity-modal-emoji" id="identityModalEmoji">🏸</div>
             <div class="modal-title" id="identityModalTitle">先在球馆登记一下你的名字呀～</div>
-            <div class="modal-desc">
+            <div class="modal-desc" id="identityModalDesc">
                 用你最常用的微信名就可以啦，它会变成你的专属小名片：
                 <br>
-                · 后续上传 / 处理的历史任务只对你自己可见
+                · 上传视频、处理任务、留言都需要登录
                 <br>
                 · 留言墙也会用这个名字署名哦 ✍️
             </div>
-            <div class="input-row">
+            <div class="input-row" id="identityNameRow">
                 <input type="text" id="identityInput" placeholder="例如：小羽毛 / 阿Li / 小七的羽毛球" maxlength="32" autocomplete="off">
             </div>
-            <div class="identity-modal-tips">
-                💡 名字会保存在你现在的浏览器里，下次打开还能认出你。
+            <div class="input-row" id="identityPasswordRow" style="display:none;">
+                <input type="password" id="identityPasswordInput" placeholder="请输入密码（至少4位）" maxlength="32" autocomplete="off">
+                <button type="button" id="togglePasswordBtn" style="margin-left:8px;padding:0 8px;background:none;border:none;cursor:pointer;font-size:18px;">👁️</button>
+            </div>
+            <div class="input-row" id="identityPassword2Row" style="display:none;">
+                <input type="password" id="identityPassword2Input" placeholder="请再次输入密码确认" maxlength="32" autocomplete="off">
+            </div>
+            <div class="identity-modal-tips" id="identityModalTips">
+                💡 名字和登录状态会保存在你现在的浏览器里。
                 <br>
-                🍬 想换身份随时可以点顶部「换个球场昵称」，不过换了以后就看不到之前身份下的历史任务咯～
+                🍬 第一次使用这个名字会提示你设置密码哦～
             </div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" id="identityCancelBtn" type="button">先不登记，偷偷看</button>
-                <button class="btn btn-primary" id="identityConfirmBtn" type="button">就用这个身份上场 🏸</button>
+                <button class="btn btn-secondary" id="identityBackBtn" type="button" style="display:none;">← 返回</button>
+                <button class="btn btn-secondary" id="identityCancelBtn" type="button">先不登录，偷偷看</button>
+                <button class="btn btn-primary" id="identityConfirmBtn" type="button">下一步 ▶</button>
             </div>
         </div>
     </div>
@@ -1800,10 +1808,16 @@
             <div class="modal-desc">
                 填了微信名，「往届名场面」一搜就是你自己的集锦册；
                 <br>
-                不填我就默认你叫「神秘打球人」，档案室里可是找不到你哦。
+                不填我就默认用你的登录昵称啦。
             </div>
             <div class="input-row">
                 <input type="text" id="taskNameInput" placeholder="例如：张三 · 周三晚场 vs 李哥" maxlength="40" autocomplete="off">
+            </div>
+            <div class="input-row" style="margin-top:8px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#666;">
+                    <input type="checkbox" id="isPrivateCheckbox">
+                    🔒 仅自己可见（勾选后其他人看不到这场球）
+                </label>
             </div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="taskNameCancelBtn" type="button">先不打了，下次再说</button>
@@ -1847,7 +1861,12 @@
     </script>
     <script>
         const WECHAT_NAME_STORAGE_KEY = 'badminton:wechat_name';
+        const AUTH_TOKEN_STORAGE_KEY = 'badminton:auth_token';
         let wechatName = '';
+        let authToken = '';
+        let isAdmin = false;
+        let authStep = 'name';
+        let pendingWechatName = '';
         let commentRating = 0;
         let currentUpload = null;
         let currentOutputFiles = [];
@@ -1908,8 +1927,19 @@
         const identityInput = document.getElementById('identityInput');
         const identityConfirmBtn = document.getElementById('identityConfirmBtn');
         const identityCancelBtn = document.getElementById('identityCancelBtn');
-        const identityModalEmoji = document.getElementById('identityModalEmoji');
+        const identityBackBtn = document.getElementById('identityBackBtn');
+        const identityPasswordInput = document.getElementById('identityPasswordInput');
+        const identityPassword2Input = document.getElementById('identityPassword2Input');
+        const identityNameRow = document.getElementById('identityNameRow');
+        const identityPasswordRow = document.getElementById('identityPasswordRow');
+        const identityPassword2Row = document.getElementById('identityPassword2Row');
         const identityModalTitle = document.getElementById('identityModalTitle');
+        const identityModalDesc = document.getElementById('identityModalDesc');
+        const identityModalTips = document.getElementById('identityModalTips');
+        const identityModalEmoji = document.getElementById('identityModalEmoji');
+        const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+
+        const isPrivateCheckbox = document.getElementById('isPrivateCheckbox');
 
         const commentRatingEl = document.getElementById('commentRating');
         const commentContentEl = document.getElementById('commentContent');
@@ -2030,8 +2060,81 @@
             return HOSTED_BASE + path;
         }
 
+        function getAuthHeader() {
+            const headers = {};
+            if (authToken) {
+                headers['X-Auth-Token'] = authToken;
+            }
+            return headers;
+        }
+
         function getWechatHeader() {
-            return wechatName ? { 'X-Wechat-Name': encodeURIComponent(wechatName) } : {};
+            return getAuthHeader();
+        }
+
+        function loadAuthToken() {
+            try {
+                return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function saveAuth(name, token, admin) {
+            wechatName = (name || '').slice(0, 32);
+            authToken = token || '';
+            isAdmin = !!admin;
+            try {
+                window.localStorage.setItem(WECHAT_NAME_STORAGE_KEY, wechatName);
+                window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, authToken);
+            } catch (e) {}
+            renderIdentity();
+        }
+
+        function clearAuth() {
+            wechatName = '';
+            authToken = '';
+            isAdmin = false;
+            try {
+                window.localStorage.removeItem(WECHAT_NAME_STORAGE_KEY);
+                window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+            } catch (e) {}
+            renderIdentity();
+        }
+
+        function setIdentityStep(step) {
+            authStep = step;
+            if (step === 'name') {
+                identityNameRow.style.display = '';
+                identityPasswordRow.style.display = 'none';
+                identityPassword2Row.style.display = 'none';
+                identityBackBtn.style.display = 'none';
+                identityConfirmBtn.textContent = '下一步 ▶';
+                identityModalTitle.textContent = '先在球馆登记一下你的名字呀～';
+                identityModalDesc.innerHTML = '用你最常用的微信名就可以啦，它会变成你的专属小名片：<br>· 上传视频、处理任务、留言都需要登录<br>· 留言墙也会用这个名字署名哦 ✍️';
+                identityModalTips.innerHTML = '💡 第一次使用这个名字会提示你设置密码哦～';
+                setTimeout(() => identityInput && identityInput.focus(), 50);
+            } else if (step === 'login') {
+                identityNameRow.style.display = 'none';
+                identityPasswordRow.style.display = 'flex';
+                identityPassword2Row.style.display = 'none';
+                identityBackBtn.style.display = '';
+                identityConfirmBtn.textContent = '登录 🏸';
+                identityModalTitle.textContent = '🔐 欢迎回来！请输入密码';
+                identityModalDesc.innerHTML = `欢迎回来 <strong>${escapeHtml(pendingWechatName)}</strong>，请输入你的密码登录`;
+                identityModalTips.innerHTML = '💡 密码是你第一次使用这个名字时设置的哦';
+                setTimeout(() => identityPasswordInput && identityPasswordInput.focus(), 50);
+            } else if (step === 'register') {
+                identityNameRow.style.display = 'none';
+                identityPasswordRow.style.display = 'flex';
+                identityPassword2Row.style.display = 'flex';
+                identityBackBtn.style.display = '';
+                identityConfirmBtn.textContent = '完成注册 🎉';
+                identityModalTitle.textContent = '🎀 第一次来呀，设个密码吧';
+                identityModalDesc.innerHTML = `你好 <strong>${escapeHtml(pendingWechatName)}</strong>！设置一个密码，以后就用这个名字+密码登录啦<br>密码至少4位，记牢哦～`;
+                identityModalTips.innerHTML = '⚠️ 密码请妥善保管，暂时不支持自助找回哦';
+                setTimeout(() => identityPasswordInput && identityPasswordInput.focus(), 50);
+            }
         }
 
         function loadWechatName() {
@@ -2066,37 +2169,140 @@
             }
             identityBar.style.display = 'flex';
             if (identityAvatar) identityAvatar.textContent = identityInitialChar(wechatName);
-            if (identityName) identityName.textContent = wechatName;
+            let displayName = wechatName;
+            if (isAdmin) displayName = '👑 ' + displayName;
+            if (identityName) identityName.textContent = displayName;
             if (typeof window.parseEmojiIfAble === 'function') window.parseEmojiIfAble(identityBar);
+        }
+
+        function resetIdentityModal() {
+            pendingWechatName = '';
+            if (identityInput) identityInput.value = '';
+            if (identityPasswordInput) identityPasswordInput.value = '';
+            if (identityPassword2Input) identityPassword2Input.value = '';
+            if (identityPasswordInput) identityPasswordInput.type = 'password';
+            if (identityPassword2Input) identityPassword2Input.type = 'password';
+            setIdentityStep('name');
         }
 
         function openIdentityModal(isEdit = false) {
             if (!identityModal) return;
-            if (identityInput) identityInput.value = wechatName;
-            if (identityModalTitle) identityModalTitle.textContent = isEdit ? '换一个可爱的身份吧 🔁' : '先告诉我你叫什么名字呀～';
+            resetIdentityModal();
+            if (isEdit && wechatName) {
+                clearAuth();
+                showToast('已退出登录，请重新登录哦～');
+            }
             const rotators = ['🌸', '🏸', '🧸', '💗', '🌟', '🍑', '🐶', '🐱', '🎐'];
             if (identityModalEmoji) identityModalEmoji.textContent = rotators[Math.floor(Math.random() * rotators.length)];
             identityModal.classList.add('show');
             if (typeof window.parseEmojiIfAble === 'function') window.parseEmojiIfAble(identityModal);
-            if (identityInput) setTimeout(() => identityInput.focus(), 50);
         }
 
         function closeIdentityModal() {
             if (identityModal) identityModal.classList.remove('show');
         }
 
-        identityConfirmBtn && identityConfirmBtn.addEventListener('click', () => {
-            const value = (identityInput && identityInput.value || '').trim();
-            if (!value) {
-                showWarnToast('先填个名字再走嘛，不然档案室不认你～');
-                identityInput && identityInput.focus();
-                return;
+        async function handleIdentityConfirm() {
+            if (authStep === 'name') {
+                const value = (identityInput && identityInput.value || '').trim();
+                if (!value) {
+                    showWarnToast('先填个名字再走嘛～');
+                    identityInput && identityInput.focus();
+                    return;
+                }
+                pendingWechatName = value;
+                identityConfirmBtn.disabled = true;
+                try {
+                    const resp = await fetch(safeApiUrl('/api/auth/check'), {
+                        ...FETCH_OPTIONS_BASE,
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wechat_name: value })
+                    });
+                    const data = await resp.json();
+                    if (data.exists) {
+                        setIdentityStep('login');
+                    } else {
+                        setIdentityStep('register');
+                    }
+                } catch (e) {
+                    showErrorToast('网络错误，请重试');
+                } finally {
+                    identityConfirmBtn.disabled = false;
+                }
+            } else if (authStep === 'login') {
+                const password = (identityPasswordInput && identityPasswordInput.value || '');
+                if (!password) {
+                    showWarnToast('请输入密码');
+                    identityPasswordInput && identityPasswordInput.focus();
+                    return;
+                }
+                identityConfirmBtn.disabled = true;
+                try {
+                    const resp = await fetch(safeApiUrl('/api/auth/login'), {
+                        ...FETCH_OPTIONS_BASE,
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wechat_name: pendingWechatName, password: password })
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok) {
+                        showWarnToast(data.error || '登录失败');
+                        return;
+                    }
+                    saveAuth(pendingWechatName, data.token, data.user && data.user.is_admin);
+                    closeIdentityModal();
+                    showSuccessToast(`${pendingWechatName}，欢迎回来！今晚打球开心哦 🏸`);
+                    loadHistory();
+                    loadComments();
+                } catch (e) {
+                    showErrorToast('网络错误，请重试');
+                } finally {
+                    identityConfirmBtn.disabled = false;
+                }
+            } else if (authStep === 'register') {
+                const p1 = (identityPasswordInput && identityPasswordInput.value || '');
+                const p2 = (identityPassword2Input && identityPassword2Input.value || '');
+                if (p1.length < 4) {
+                    showWarnToast('密码至少4位哦');
+                    identityPasswordInput && identityPasswordInput.focus();
+                    return;
+                }
+                if (p1 !== p2) {
+                    showWarnToast('两次输入的密码不一致');
+                    identityPassword2Input && identityPassword2Input.focus();
+                    return;
+                }
+                identityConfirmBtn.disabled = true;
+                try {
+                    const resp = await fetch(safeApiUrl('/api/auth/register'), {
+                        ...FETCH_OPTIONS_BASE,
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wechat_name: pendingWechatName, password: p1 })
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok) {
+                        showWarnToast(data.error || '注册失败');
+                        return;
+                    }
+                    saveAuth(pendingWechatName, data.token, data.user && data.user.is_admin);
+                    closeIdentityModal();
+                    showSuccessToast(`注册成功！${pendingWechatName}，欢迎来到无限进步球场！🎉`);
+                    loadHistory();
+                    loadComments();
+                } catch (e) {
+                    showErrorToast('网络错误，请重试');
+                } finally {
+                    identityConfirmBtn.disabled = false;
+                }
             }
-            saveWechatName(value);
-            closeIdentityModal();
-            showSuccessToast(`${value}，欢迎来到无限进步球场！今晚主打快乐，顺便切几段名场面～`);
-            loadHistory();
-            loadComments();
+        }
+
+        identityConfirmBtn && identityConfirmBtn.addEventListener('click', handleIdentityConfirm);
+
+        identityBackBtn && identityBackBtn.addEventListener('click', () => {
+            setIdentityStep('name');
         });
 
         identityCancelBtn && identityCancelBtn.addEventListener('click', () => {
@@ -2104,8 +2310,18 @@
                 closeIdentityModal();
                 return;
             }
-            showToast('没填身份也能偷看，但上传和开切会先叫你登记哦 🫣');
+            showToast('不登录也能偷看，但上传、评论会先叫你登录哦 🫣');
             closeIdentityModal();
+        });
+
+        togglePasswordBtn && togglePasswordBtn.addEventListener('click', () => {
+            if (identityPasswordInput) {
+                identityPasswordInput.type = identityPasswordInput.type === 'password' ? 'text' : 'password';
+            }
+            if (identityPassword2Input) {
+                identityPassword2Input.type = identityPassword2Input.type === 'password' ? 'text' : 'password';
+            }
+            togglePasswordBtn.textContent = togglePasswordBtn.textContent === '👁️' ? '🙈' : '👁️';
         });
 
         identityModal && identityModal.addEventListener('click', (e) => {
@@ -2119,14 +2335,39 @@
             if (e.key === 'Escape' && wechatName) closeIdentityModal();
         });
 
-        identityEditBtn && identityEditBtn.addEventListener('click', () => openIdentityModal(true));
+        [identityPasswordInput, identityPassword2Input].forEach(input => {
+            input && input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && identityConfirmBtn) identityConfirmBtn.click();
+            });
+        });
 
-        function requireWechatName(actionName) {
-            if (wechatName) return true;
+        identityEditBtn && identityEditBtn.addEventListener('click', () => {
+            if (wechatName) {
+                if (confirm('确定要退出登录吗？')) {
+                    fetch(safeApiUrl('/api/auth/logout'), {
+                        ...FETCH_OPTIONS_BASE,
+                        method: 'POST',
+                        headers: getAuthHeader()
+                    }).catch(() => {});
+                    clearAuth();
+                    showToast('已退出登录');
+                    loadHistory();
+                }
+            } else {
+                openIdentityModal(false);
+            }
+        });
+
+        function requireLogin(actionName) {
+            if (wechatName && authToken) return true;
             openIdentityModal(false);
-            const tip = actionName ? `先登记球场身份才能${actionName}哦，不然档案室找不到你这号人🌝` : '先登记球场身份哦，球馆有你更热闹～';
+            const tip = actionName ? `请先登录才能${actionName}哦 🔐` : '请先登录哦 🔐';
             setTimeout(() => showWarnToast(tip, 3000), 60);
             return false;
+        }
+
+        function requireWechatName(actionName) {
+            return requireLogin(actionName);
         }
 
         function setCommentRating(value) {
@@ -2503,6 +2744,7 @@
             const formData = new FormData();
             formData.append('file', file);
             formData.append('wechat_name', wechatName);
+            formData.append('is_private', '0');
 
             uploadArea.style.display = 'none';
             progressContainer.style.display = 'block';
@@ -2514,7 +2756,9 @@
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/api/upload');
             try {
-                xhr.setRequestHeader('X-Wechat-Name', encodeURIComponent(wechatName));
+                if (authToken) {
+                    xhr.setRequestHeader('X-Auth-Token', authToken);
+                }
             } catch (e) {}
 
             xhr.upload.addEventListener('progress', (e) => {
@@ -2764,6 +3008,7 @@
                     task_name: raw,
                     user_name: raw,
                     wechat_name: wechatName,
+                    is_private: isPrivateCheckbox ? isPrivateCheckbox.checked : false,
                 })
             })
             .then(response => parseJsonOrFriendly(response))
@@ -3166,9 +3411,11 @@
                 const totalSize = files.reduce((s, f) => s + (f.size || 0), 0);
                 const status = task.status || 'pending';
                 const isDel = !!task.is_deleted;
+                const isPrivate = !!task.is_private;
                 const canDelete = !isDel && (task.is_owner || task.is_admin);
                 const canRestore = isDel && task.is_admin;
                 const deletedBadge = isDel ? '<span class="deleted-badge">已删除</span>' : '';
+                const privateBadge = isPrivate ? '<span class="chip" style="background:#6b5dd3;color:#fff;font-size:11px;">🔒 仅自己可见</span>' : '';
                 const statusChip = isDel
                     ? '<span class="chip" style="background:#999;color:#fff;">已隐藏</span>'
                     : `<span class="chip ${escapeHtml(status)}">${escapeHtml(status)}</span>`;
@@ -3208,7 +3455,7 @@
                         <div class="dy-body">
                             <div class="dy-top-row">
                                 <div class="dy-user-wrap">
-                                    <span class="dy-user-name">${name}${deletedBadge}</span>
+                                    <span class="dy-user-name">${name}${deletedBadge} ${privateBadge}</span>
                                     <span class="dy-user-title">往届名场面 #${idx + 1}${task.is_admin ? ' 👑 管理员视角' : ''}</span>
                                 </div>
                                 <span class="dy-time">${createdAt}</span>
@@ -3402,17 +3649,40 @@
             return missing.length === 0;
         }
 
-        function bootstrapPage() {
+        async function bootstrapPage() {
             checkCriticalDoms();
-            let saved = null;
-            try { saved = localStorage.getItem(WECHAT_NAME_STORAGE_KEY); } catch (e) {}
-            if (saved) {
-                saveWechatName(saved);
+            let savedName = null;
+            let savedToken = null;
+            try { savedName = localStorage.getItem(WECHAT_NAME_STORAGE_KEY); } catch (e) {}
+            try { savedToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY); } catch (e) {}
+
+            if (savedToken) {
+                authToken = savedToken;
+                try {
+                    const resp = await fetch(safeApiUrl('/api/auth/me'), {
+                        ...FETCH_OPTIONS_BASE,
+                        method: 'GET',
+                        headers: getAuthHeader()
+                    });
+                    const data = await resp.json();
+                    if (data && data.user) {
+                        wechatName = data.user.wechat_name;
+                        isAdmin = !!data.user.is_admin;
+                        renderIdentity();
+                    } else {
+                        clearAuth();
+                    }
+                } catch (e) {
+                    clearAuth();
+                }
+            } else if (savedName) {
+                clearAuth();
             }
+
             loadRuntimeConfig().then(() => {
                 loadHistory();
                 loadComments();
-                if (!saved) {
+                if (!wechatName) {
                     setTimeout(() => {
                         if (!wechatName) openIdentityModal(false);
                     }, 400);
@@ -3425,6 +3695,22 @@
             if (typeof window.parseEmojiIfAble === 'function') {
                 try { window.parseEmojiIfAble(document.body); } catch (e) { console.warn('[badminton] parseEmojiIfAble failed:', e); }
             }
+        }
+
+        async function authedFetch(url, options = {}) {
+            options.headers = { ...(options.headers || {}), ...getAuthHeader() };
+            const resp = await fetch(url, options);
+            if (resp.status === 401) {
+                try {
+                    const data = await resp.clone().json();
+                    if (data && data.need_login) {
+                        clearAuth();
+                        openIdentityModal(false);
+                        showWarnToast('请先登录后再操作哦 🔐');
+                    }
+                } catch (e) {}
+            }
+            return resp;
         }
 
         bootstrapPage();
