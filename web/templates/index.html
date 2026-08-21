@@ -305,16 +305,23 @@
             gap: 10px;
         }
 
+        .input-row input[type="text"],
+        .input-row input[type="password"],
         .input-row input[type="number"] {
             flex: 1;
-            padding: 10px 14px;
+            padding: 11px 14px;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             font-size: 15px;
             outline: none;
             transition: border-color 0.2s;
+            min-height: 44px;
+            box-sizing: border-box;
+            line-height: 1.4;
         }
 
+        .input-row input[type="text"]:focus,
+        .input-row input[type="password"]:focus,
         .input-row input[type="number"]:focus {
             border-color: #667eea;
         }
@@ -729,19 +736,6 @@
             padding: 11px 14px;
         }
 
-        .input-row input[type="text"] {
-            flex: 1;
-            padding: 11px 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 15px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .input-row input[type="text"]:focus {
-            border-color: #667eea;
-        }
 
         .history-header {
             display: flex;
