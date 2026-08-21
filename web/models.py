@@ -13,8 +13,6 @@ DB_PATH = os.getenv('DB_PATH', os.path.join(DATA_DIR, 'badminton.db'))
 ADMIN_WECHAT_NAME = '行遇书'
 ADMIN_DEFAULT_PASSWORD = 'XingYuShu@2026'
 
-_token_store = {}
-
 
 @contextmanager
 def get_conn():
@@ -99,6 +97,18 @@ def init_db():
         )
 
         conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sessions (
+                token TEXT PRIMARY KEY,
+                wechat_name TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_sessions_wechat ON sessions(wechat_name)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_sessions_created ON sessions(created_at)')
+
+        conn.execute(
             "UPDATE tasks SET task_name = wechat_name WHERE (task_name IS NULL OR task_name = '') AND wechat_name IS NOT NULL AND wechat_name <> ''"
         )
         conn.execute(
@@ -164,28 +174,32 @@ def get_user_by_name(wechat_name):
 
 def create_token(wechat_name):
     token = uuid.uuid4().hex
-    _token_store[token] = {
-        'wechat_name': wechat_name,
-        'created_at': datetime.utcnow()
-    }
+    now = datetime.utcnow().isoformat() + 'Z'
+    with get_conn() as conn:
+        conn.execute('DELETE FROM sessions WHERE julianday(?) - julianday(created_at) > 7', (now,))
+        conn.execute(
+            'INSERT INTO sessions (token, wechat_name, created_at) VALUES (?, ?, ?)',
+            (token, wechat_name, now)
+        )
     return token
 
 
 def get_user_by_token(token):
     if not token:
         return None
-    data = _token_store.get(token)
-    if not data:
-        return None
-    if datetime.utcnow() - data['created_at'] > timedelta(days=7):
-        del _token_store[token]
-        return None
-    return get_user_by_name(data['wechat_name'])
+    with get_conn() as conn:
+        row = conn.execute(
+            'SELECT u.* FROM sessions s JOIN users u ON s.wechat_name = u.wechat_name WHERE s.token = ? AND julianday(?) - julianday(s.created_at) <= 7',
+            (token, datetime.utcnow().isoformat() + 'Z')
+        ).fetchone()
+    return dict(row) if row else None
 
 
 def revoke_token(token):
-    if token in _token_store:
-        del _token_store[token]
+    if not token:
+        return
+    with get_conn() as conn:
+        conn.execute('DELETE FROM sessions WHERE token = ?', (token,))
 
 
 def is_admin(wechat_name):
