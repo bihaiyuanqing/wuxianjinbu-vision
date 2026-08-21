@@ -559,15 +559,15 @@ def estimate_process():
 
 @app.route('/api/upload', methods=['POST'])
 def upload_video():
+    wechat_name = _require_login()
+    if not wechat_name:
+        return jsonify({'error': '请先登录后再上传视频哦 🔐', 'need_login': True}), 401
+
     if 'file' not in request.files:
         logger.warning('upload request missing file part')
         return jsonify({'error': 'No file part'}), 400
 
     file = request.files['file']
-    wechat_name = _require_login()
-
-    if not wechat_name:
-        return jsonify({'error': '请先登录后再上传视频哦 🔐', 'need_login': True}), 401
 
     is_private = False
     if request.form:
@@ -695,17 +695,17 @@ def upload_video():
 
 @app.route('/api/process', methods=['POST'])
 def process_video():
+    wechat_name = _require_login()
+    if not wechat_name:
+        return jsonify({'error': '请先登录后再处理视频哦 🏸', 'need_login': True}), 401
+
     data = request.get_json(silent=True) or {}
     upload_id = data.get('upload_id')
     safe_filename = data.get('safe_filename')
     min_duration = data.get('min_duration')
     user_name = (data.get('user_name') or data.get('task_name') or '').strip() or None
     task_name = (data.get('task_name') or data.get('user_name') or '').strip() or None
-    wechat_name = _require_login()
     is_private = bool(data.get('is_private'))
-
-    if not wechat_name:
-        return jsonify({'error': '请先登录后再处理视频哦 🏸', 'need_login': True}), 401
 
     if not upload_id or not safe_filename:
         return jsonify({'error': 'Missing upload_id or safe_filename'}), 400
