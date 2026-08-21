@@ -2679,6 +2679,20 @@
         }
 
         function handleFile(file) {
+            uploadArea.style.display = 'none';
+            progressContainer.style.display = 'block';
+            videoPreview.style.display = 'none';
+            resultCard.style.display = 'none';
+            durationWarnEl.style.display = 'none';
+            estimateCardEl.style.display = 'none';
+            progressFill.style.width = '1%';
+            progressText.textContent = '🔍 正在检查视频信息…';
+
+            const resetUploadArea = () => {
+                uploadArea.style.display = '';
+                progressContainer.style.display = 'none';
+            };
+
             const allowedExtensions = ['mp4', 'mov', 'qt', 'm4v', '3gp', 'avi', 'mkv', 'flv', 'wmv', 'webm', 'mts', 'm2ts'];
             const fileExtension = file.name.split('.').pop().toLowerCase();
             const isValidByType = file.type.startsWith('video/');
@@ -2686,14 +2700,20 @@
             
             if (!isValidByType && !isValidByExt) {
                 showWarnToast('这颗球出界了～请上传 MP4/MOV/QT/AVI 等视频文件');
+                resetUploadArea();
                 return;
             }
             const maxSizeMb = (runtimeConfig && runtimeConfig.max_upload_mb) || 600;
             if (file.size > maxSizeMb * 1024 * 1024) {
                 showWarnToast(`视频文件太大了～单条最大 ${maxSizeMb}MB，当前 ${(file.size / 1024 / 1024).toFixed(1)}MB，请压缩或裁剪后再传`);
+                resetUploadArea();
                 return;
             }
-            if (!requireWechatName('上传视频')) return;
+            if (!requireWechatName('上传视频')) {
+                resetUploadArea();
+                return;
+            }
+            progressText.textContent = '⏳ 读取视频时长…';
             const recommendedMinutes = (runtimeConfig && runtimeConfig.recommended_max_duration_minutes) || 10;
             const hardMaxSeconds = (runtimeConfig && runtimeConfig.hard_max_duration_seconds) || 30 * 60;
             const probeVideo = document.createElement('video');
@@ -2717,6 +2737,7 @@
                 if (preSeconds > 0) {
                     if (preSeconds > hardMaxSeconds) {
                         showWarnToast(`视频时长 ${Math.round(preSeconds / 60 * 10) / 10} 分钟，超过 ${Math.round(hardMaxSeconds / 60)} 分钟硬上限，请裁剪后再上传`);
+                        resetUploadArea();
                         return;
                     }
                     const preMinutes = Math.ceil(preSeconds / 60);
@@ -2726,6 +2747,7 @@
                         );
                         if (!ok) {
                             showWarnToast('先暂停发球～可以在手机相册里裁到 ' + recommendedMinutes + ' 分钟以内再来哦');
+                            resetUploadArea();
                             return;
                         }
                     }
