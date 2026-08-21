@@ -138,20 +138,24 @@ logging.basicConfig(
 logger = logging.getLogger('badminton-web')
 
 
-def _format_comment_time(created_at):
-    from datetime import timezone, timedelta
+def utc_to_beijing_str(utc_time_str, fmt='%Y-%m-%d %H:%M'):
+    if not utc_time_str:
+        return None
     try:
-        if created_at.endswith('Z'):
-            dt = datetime.fromisoformat(created_at[:-1])
-            dt = dt + timedelta(hours=8)
-        else:
-            dt = datetime.fromisoformat(created_at)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        dt = dt.astimezone(timezone(timedelta(hours=8)))
+        s = utc_time_str.strip()
+        if s.endswith('Z'):
+            s = s[:-1]
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone(timedelta(hours=8)))
+            return dt.strftime(fmt)
+        return (dt + timedelta(hours=8)).strftime(fmt)
     except Exception:
-        return created_at
-    return dt.strftime('%Y-%m-%d %H:%M')
+        return utc_time_str
+
+
+def _format_comment_time(created_at):
+    return utc_to_beijing_str(created_at)
 
 
 def allowed_file(filename):
@@ -789,8 +793,11 @@ def _serialize_task(t):
         'progress_message': t.get('progress_message') or '',
         'error': t.get('error'),
         'created_at': t.get('created_at'),
+        'created_at_str': utc_to_beijing_str(t.get('created_at')),
         'started_at': t.get('started_at'),
+        'started_at_str': utc_to_beijing_str(t.get('started_at')),
         'completed_at': t.get('completed_at'),
+        'completed_at_str': utc_to_beijing_str(t.get('completed_at')),
         'is_deleted': bool(t.get('is_deleted') or 0),
         'deleted_at': t.get('deleted_at'),
         'result': result,

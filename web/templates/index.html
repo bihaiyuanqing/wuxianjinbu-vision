@@ -3418,7 +3418,7 @@
             historyList.innerHTML = tasks.map((task, idx) => {
                 const id = 'dy-' + (task.upload_id || String(idx)) + '-' + Math.random().toString(36).slice(2, 7);
                 const quote = pickCommentQuote(task);
-                const createdAt = formatDate(task.created_at);
+                const createdAt = task.created_at_str || formatDate(task.created_at);
                 const name = escapeHtml(task.task_name || task.user_name || task.wechat_name || '神秘打球人');
                 const original = escapeHtml(truncateFilename(task.original_filename || task.safe_filename || '无名录像'));
                 const upload = escapeHtml(task.upload_url || '');
