@@ -55,24 +55,65 @@ from web.models import (
     init_db,
     create_task,
     update_task_completed,
+    update_task_progress,
     list_tasks,
     list_task_names,
     get_task,
     delete_task,
+    soft_delete_task,
+    restore_task,
     add_comment,
     list_comments,
+    user_exists,
+    create_user,
+    verify_user,
+    create_token,
+    get_user_by_token,
+    revoke_token,
+    is_admin as is_admin_user,
+    can_view_task,
 )
+from web.task_queue import task_queue
+import json as _json
 
-init_db()
-
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL.upper(), logging.INFO),
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
-)
-logger = logging.getLogger('badminton-web')
+ADMIN_WECHAT_NAME = '行遇书'
 
 
-def _require_wechat_name():
+def _get_current_user():
+    token = request.headers.get('X-Auth-Token') or request.args.get('token')
+    if not token and request.is_json:
+        body = request.get_json(silent=True) or {}
+        token = body.get('token')
+    if token:
+        user = get_user_by_token(token)
+        if user:
+            return user
+    header_name = request.headers.get('X-Wechat-Name') or ''
+    try:
+        from urllib.parse import unquote
+        header_name = unquote(header_name or '').strip()
+    except Exception:
+        header_name = header_name.strip()
+    if not header_name and not request.is_json and request.method == 'POST' and request.form:
+        header_name = (request.form.get('wechat_name') or '').strip()
+    if header_name:
+        u = get_user_by_token(header_name)
+        if u:
+            return u
+    return None
+
+
+def _require_login():
+    user = _get_current_user()
+    if not user:
+        return None
+    return user['wechat_name']
+
+
+def _get_wechat_name_compat():
+    user = _get_current_user()
+    if user:
+        return user['wechat_name']
     header_value = request.headers.get('X-Wechat-Name') or ''
     try:
         from urllib.parse import unquote
@@ -88,16 +129,33 @@ def _require_wechat_name():
     return value or None
 
 
-def _format_comment_time(created_at):
+init_db()
+
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL.upper(), logging.INFO),
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger('badminton-web')
+
+
+def utc_to_beijing_str(utc_time_str, fmt='%Y-%m-%d %H:%M'):
+    if not utc_time_str:
+        return None
     try:
-        if created_at.endswith('Z'):
-            dt = datetime.fromisoformat(created_at[:-1])
-            dt = dt + timedelta(hours=8)
-        else:
-            dt = datetime.fromisoformat(created_at)
+        s = utc_time_str.strip()
+        if s.endswith('Z'):
+            s = s[:-1]
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone(timedelta(hours=8)))
+            return dt.strftime(fmt)
+        return (dt + timedelta(hours=8)).strftime(fmt)
     except Exception:
-        return created_at
-    return dt.strftime('%Y-%m-%d %H:%M')
+        return utc_time_str
+
+
+def _format_comment_time(created_at):
+    return utc_to_beijing_str(created_at)
 
 
 def allowed_file(filename):
@@ -284,6 +342,83 @@ def estimate_process_plan(source_duration_seconds, width=None, height=None,
     }
 
 
+@app.route('/api/auth/check', methods=['POST'])
+def auth_check():
+    data = request.get_json(silent=True) or {}
+    wechat_name = (data.get('wechat_name') or '').strip()
+    if not wechat_name:
+        return jsonify({'error': '请输入微信名'}), 400
+    exists = user_exists(wechat_name)
+    return jsonify({'exists': exists, 'wechat_name': wechat_name}), 200
+
+
+@app.route('/api/auth/register', methods=['POST'])
+def auth_register():
+    data = request.get_json(silent=True) or {}
+    wechat_name = (data.get('wechat_name') or '').strip()
+    password = data.get('password') or ''
+    if not wechat_name:
+        return jsonify({'error': '请输入微信名'}), 400
+    if len(password) < 4:
+        return jsonify({'error': '密码至少4位哦'}), 400
+    if user_exists(wechat_name):
+        return jsonify({'error': '这个名字已经有人用啦，请换一个或者直接登录'}), 400
+    user = create_user(wechat_name, password)
+    if not user:
+        return jsonify({'error': '注册失败，请稍后重试'}), 500
+    token = create_token(wechat_name)
+    logger.info(f'user registered: {wechat_name} admin={user.get("is_admin")}')
+    return jsonify({
+        'token': token,
+        'user': {
+            'wechat_name': user['wechat_name'],
+            'is_admin': bool(user.get('is_admin')),
+        }
+    }), 200
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def auth_login():
+    data = request.get_json(silent=True) or {}
+    wechat_name = (data.get('wechat_name') or '').strip()
+    password = data.get('password') or ''
+    if not wechat_name or not password:
+        return jsonify({'error': '请输入微信名和密码'}), 400
+    user = verify_user(wechat_name, password)
+    if not user:
+        return jsonify({'error': '密码不对哦，再想想？'}), 401
+    token = create_token(wechat_name)
+    logger.info(f'user logged in: {wechat_name} admin={user.get("is_admin")}')
+    return jsonify({
+        'token': token,
+        'user': {
+            'wechat_name': user['wechat_name'],
+            'is_admin': bool(user.get('is_admin')),
+        }
+    }), 200
+
+
+@app.route('/api/auth/logout', methods=['POST'])
+def auth_logout():
+    token = request.headers.get('X-Auth-Token')
+    if token:
+        revoke_token(token)
+    return jsonify({'ok': True}), 200
+
+
+@app.route('/api/auth/me', methods=['GET'])
+def auth_me():
+    user = _get_current_user()
+    if not user:
+        return jsonify({'user': None}), 200
+    return jsonify({
+        'user': {
+            'wechat_name': user['wechat_name'],
+            'is_admin': bool(user.get('is_admin')),
+        }
+    }), 200
+
+
 @app.route('/health')
 def health():
     return jsonify({
@@ -421,10 +556,14 @@ def upload_video():
         return jsonify({'error': 'No file part'}), 400
 
     file = request.files['file']
-    wechat_name = _require_wechat_name()
+    wechat_name = _require_login()
 
     if not wechat_name:
-        return jsonify({'error': '请先填写可爱的微信名再来上传哦 ✨'}), 400
+        return jsonify({'error': '请先登录后再上传视频哦 🔐', 'need_login': True}), 401
+
+    is_private = False
+    if request.form:
+        is_private = (request.form.get('is_private') or '').lower() in ('1', 'true', 'yes', 'on')
 
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
@@ -433,8 +572,16 @@ def upload_video():
         return jsonify({'error': 'File type not allowed'}), 400
 
     upload_id = str(uuid.uuid4())
-    filename = file.filename
-    safe_filename = f"{upload_id}_{filename}"
+    original_filename_raw = file.filename
+
+    import re
+    ext = os.path.splitext(original_filename_raw)[1].lower()
+    name_clean = re.sub(r'[\\/:*?"<>|\s]+', '_', wechat_name.strip())
+    name_clean = name_clean[:20]
+    now_cn = datetime.utcnow() + timedelta(hours=8)
+    display_filename = f"{now_cn.strftime('%Y%m%d_%H%M%S')}_{name_clean}{ext}"
+
+    safe_filename = f"{upload_id}_{display_filename}"
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
     file.save(filepath)
 
@@ -475,7 +622,7 @@ def upload_video():
         'wechat_name': wechat_name,
         'task_name': None,
         'user_name': None,
-        'original_filename': filename,
+        'original_filename': display_filename,
         'safe_filename': safe_filename,
         'upload_url': upload_url,
         'upload_size': upload_size,
@@ -483,6 +630,7 @@ def upload_video():
         'min_duration': None,
         'status': 'uploaded',
         'output_count': 0,
+        'is_private': is_private,
     })
 
     import sys
@@ -511,7 +659,7 @@ def upload_video():
 
     response = {
         'upload_id': upload_id,
-        'filename': filename,
+        'filename': display_filename,
         'safe_filename': safe_filename,
         'url': upload_url,
         'size': upload_size,
@@ -539,16 +687,17 @@ def upload_video():
 
 @app.route('/api/process', methods=['POST'])
 def process_video():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     upload_id = data.get('upload_id')
     safe_filename = data.get('safe_filename')
     min_duration = data.get('min_duration')
     user_name = (data.get('user_name') or data.get('task_name') or '').strip() or None
     task_name = (data.get('task_name') or data.get('user_name') or '').strip() or None
-    wechat_name = _require_wechat_name()
+    wechat_name = _require_login()
+    is_private = bool(data.get('is_private'))
 
     if not wechat_name:
-        return jsonify({'error': '请先填写可爱的微信名再来处理视频哦 🏸'}), 400
+        return jsonify({'error': '请先登录后再处理视频哦 🏸', 'need_login': True}), 401
 
     if not upload_id or not safe_filename:
         return jsonify({'error': 'Missing upload_id or safe_filename'}), 400
@@ -562,11 +711,22 @@ def process_video():
     if task and task.get('wechat_name') and task['wechat_name'] != wechat_name:
         return jsonify({'error': '这个视频不属于你哦，处理权限不足 🙅'}), 403
 
+    if task and task.get('status') in ('processing', 'uploaded'):
+        existing_status = task.get('status')
+        if existing_status == 'processing':
+            return jsonify({
+                'upload_id': upload_id,
+                'status': 'processing',
+                'message': '视频正在处理中，请稍候…',
+                'progress': float(task.get('progress') or 0),
+                'progress_message': task.get('progress_message') or '处理中…',
+            }), 202
+
     output_dir_abs = os.path.join(app.config['OUTPUT_FOLDER'], upload_id)
     os.makedirs(output_dir_abs, exist_ok=True)
 
-    upload_url = f'/uploads/{safe_filename}'
     output_dir_rel = f'/outputs/{upload_id}'
+    upload_url = f'/uploads/{safe_filename}'
 
     if task is None:
         create_task({
@@ -580,121 +740,158 @@ def process_video():
             'upload_size': os.path.getsize(input_path) if os.path.exists(input_path) else None,
             'output_dir': output_dir_rel,
             'min_duration': min_duration,
-            'status': 'processing',
+            'status': 'queued',
             'output_count': 0,
+            'is_private': is_private,
         })
+    else:
+        from web.models import get_conn
+        with get_conn() as conn:
+            conn.execute('UPDATE tasks SET is_private = ? WHERE upload_id = ?', (1 if is_private else 0, upload_id))
 
-    try:
-        import sys
-        if PROJECT_ROOT not in sys.path:
-            sys.path.insert(0, PROJECT_ROOT)
+    submitted = task_queue.submit(
+        upload_id=upload_id,
+        input_path=input_path,
+        output_dir_abs=output_dir_abs,
+        min_duration=min_duration,
+        wechat_name=wechat_name,
+        user_name=user_name,
+        task_name=task_name,
+    )
 
-        from src.segmenter import VideoSegmenter
-        from src.video_cutter import VideoCutter
+    return jsonify({
+        'upload_id': upload_id,
+        'status': 'processing',
+        'message': '视频已加入处理队列，开始后台处理…',
+        'progress': 0.01,
+        'progress_message': '正在准备处理视频…',
+    }), 202
 
-        segmenter = VideoSegmenter(
-            min_segment_duration=3.0,
-            max_segment_duration=60.0,
-            padding_before=0.5,
-            padding_after=0.5
-        )
 
-        logger.info(f'[{upload_id}] start segmenting video: {input_path} wechat_name={wechat_name}')
-        segments = segmenter.process_video(input_path, use_tracknet=False)
-        stats = segmenter.get_segment_stats()
-        logger.info(f'[{upload_id}] segmented: {stats}')
-
-        video_cutter = VideoCutter(
-            output_format='mp4',
-            codec=None,
-            quality=23
-        )
-        encoder_speed_ratio = float(getattr(video_cutter, 'encoder_speed_ratio', 1.0))
-        encoder_label = getattr(video_cutter, 'encoder_name_label', None) or 'libx264 (CPU)'
-
-        cut_min_duration = None
-        if min_duration is not None:
-            try:
-                cut_min_duration = float(min_duration)
-            except (ValueError, TypeError):
-                pass
-
-        estimate_payload = estimate_process_plan(
-            segmenter.video_duration,
-            width=getattr(segmenter, 'video_width', None),
-            height=getattr(segmenter, 'video_height', None),
-            encoder_speed_ratio=encoder_speed_ratio,
-            min_duration_filter=cut_min_duration,
-        )
-        process_hint = (f"预估 {format_minutes_str(estimate_payload['low_seconds'])} ～ "
-                        f"{format_minutes_str(estimate_payload['high_seconds'])}，编码器：{encoder_label}")
-        logger.info(f'[{upload_id}] cutting: {process_hint}')
-
-        success_count = video_cutter.cut_segments_with_filter(
-            input_path=input_path,
-            segments=segmenter.segments,
-            output_dir=output_dir_abs,
-            min_duration=cut_min_duration,
-            prefix='segment'
-        )
-        logger.info(f'[{upload_id}] cut segments: success={success_count}')
-
-        output_files = []
-        if os.path.exists(output_dir_abs):
-            for f in sorted(os.listdir(output_dir_abs)):
-                if f.endswith('.mp4'):
-                    file_path = os.path.join(output_dir_abs, f)
-                    duration = get_video_duration(file_path)
-                    output_files.append({
-                        'name': f,
-                        'url': f'/outputs/{upload_id}/{f}',
-                        'size': os.path.getsize(file_path),
-                        'duration': duration,
-                        'duration_str': format_duration(duration)
-                    })
-
-        update_task_completed(upload_id, 'completed', len(output_files))
-
-        return jsonify({
-            'upload_id': upload_id,
-            'status': 'completed',
-            'total_segments': stats['total_segments'],
-            'success_count': success_count,
-            'output_files': output_files,
-            'output_dir': output_dir_rel,
-            'wechat_name': wechat_name,
-            'user_name': user_name,
-            'task_name': task_name,
-            'processing_estimate': {
-                **estimate_payload,
-                'best_effort_human': format_minutes_str(estimate_payload['best_effort_seconds']),
-                'low_human': format_minutes_str(estimate_payload['low_seconds']),
-                'high_human': format_minutes_str(estimate_payload['high_seconds']),
-                'budget_human': format_minutes_str(BUDGET_SECONDS_FOR_PROCESS),
-                'encoder_label': encoder_label,
-            },
-        }), 200
-
-    except Exception as e:
-        logger.exception(f'[{upload_id}] process failed: {e}')
+def _serialize_task(t):
+    result = None
+    if t.get('result_data'):
         try:
-            update_task_completed(upload_id, 'failed', 0)
+            result = _json.loads(t['result_data'])
         except Exception:
-            pass
-        return jsonify({'error': str(e)}), 500
+            result = None
+    return {
+        'upload_id': t['upload_id'],
+        'wechat_name': t.get('wechat_name'),
+        'user_name': t.get('user_name'),
+        'task_name': t.get('task_name'),
+        'original_filename': t.get('original_filename'),
+        'safe_filename': t.get('safe_filename'),
+        'upload_url': t.get('upload_url'),
+        'upload_size': t.get('upload_size'),
+        'output_dir': t.get('output_dir'),
+        'output_count': t.get('output_count') or 0,
+        'total_segments': t.get('total_segments') or 0,
+        'min_duration': t.get('min_duration'),
+        'status': t.get('status'),
+        'progress': float(t.get('progress') or 0.0),
+        'progress_message': t.get('progress_message') or '',
+        'error': t.get('error'),
+        'created_at': t.get('created_at'),
+        'created_at_str': utc_to_beijing_str(t.get('created_at')),
+        'started_at': t.get('started_at'),
+        'started_at_str': utc_to_beijing_str(t.get('started_at')),
+        'completed_at': t.get('completed_at'),
+        'completed_at_str': utc_to_beijing_str(t.get('completed_at')),
+        'is_deleted': bool(t.get('is_deleted') or 0),
+        'deleted_at': t.get('deleted_at'),
+        'result': result,
+    }
+
+
+@app.route('/api/task/<upload_id>/status', methods=['GET'])
+def task_status(upload_id):
+    wechat_name = _require_wechat_name()
+    task = get_task(upload_id)
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+    if task.get('wechat_name') and wechat_name and task['wechat_name'] != wechat_name:
+        return jsonify({'error': '无权查看此任务'}), 403
+
+    output_dir_abs = os.path.join(app.config['OUTPUT_FOLDER'], upload_id)
+    output_files = []
+    if os.path.isdir(output_dir_abs):
+        for f in sorted(os.listdir(output_dir_abs)):
+            fpath = os.path.join(output_dir_abs, f)
+            if os.path.isfile(fpath) and f.endswith('.mp4'):
+                duration = get_video_duration(fpath)
+                output_files.append({
+                    'name': f,
+                    'url': f"/outputs/{upload_id}/{f}",
+                    'size': os.path.getsize(fpath),
+                    'duration': duration,
+                    'duration_str': format_duration(duration),
+                })
+
+    resp = _serialize_task(task)
+    resp['output_files'] = output_files
+    return jsonify(resp), 200
+
+
+@app.route('/api/task/<upload_id>/events')
+def task_events(upload_id):
+    def generate():
+        task = get_task(upload_id)
+        if task:
+            initial_data = _serialize_task(task)
+            yield f"data: {_json.dumps(initial_data, ensure_ascii=False)}\n\n"
+            if task.get('status') in ('completed', 'failed', 'expired'):
+                yield "event: done\ndata: {}\n\n"
+                return
+
+        q = task_queue.subscribe(upload_id)
+        try:
+            import time
+            while True:
+                try:
+                    event = q.get(timeout=15)
+                    yield event
+                    if '"status": "completed"' in event or '"status": "failed"' in event:
+                        break
+                except Exception:
+                    task = get_task(upload_id)
+                    if task and task.get('status') in ('completed', 'failed', 'expired'):
+                        final_data = _serialize_task(task)
+                        yield f"data: {_json.dumps(final_data, ensure_ascii=False)}\n\n"
+                        break
+                    yield ": keepalive\n\n"
+        finally:
+            task_queue.unsubscribe(upload_id, q)
+
+    return app.response_class(generate(), mimetype='text/event-stream', headers={
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+        'Connection': 'keep-alive',
+    })
 
 
 @app.route('/api/list', methods=['GET'])
 def list_files():
     user_name = request.args.get('user_name')
     task_name = request.args.get('task_name')
-    wechat_name = _require_wechat_name()
-    raw_tasks = list_tasks(user_name=user_name, task_name=task_name, days=None, wechat_name=wechat_name)
+    current_user = _get_current_user()
+    wechat_name = current_user['wechat_name'] if current_user else None
+    is_admin = bool(current_user and current_user.get('is_admin'))
+    raw_tasks = list_tasks(
+        user_name=user_name,
+        task_name=task_name,
+        days=None,
+        show_all=is_admin,
+        include_deleted=is_admin,
+        current_user=wechat_name,
+    )
     tasks = []
     for t in raw_tasks:
+        if not can_view_task(t, wechat_name):
+            continue
         output_dir_abs = os.path.join(app.config['OUTPUT_FOLDER'], t['upload_id'])
         output_files = []
-        if os.path.isdir(output_dir_abs):
+        if (is_admin or not t.get('is_deleted')) and os.path.isdir(output_dir_abs):
             for f in sorted(os.listdir(output_dir_abs)):
                 fpath = os.path.join(output_dir_abs, f)
                 if os.path.isfile(fpath) and f.endswith('.mp4'):
@@ -706,28 +903,55 @@ def list_files():
                         'duration': duration,
                         'duration_str': format_duration(duration),
                     })
-        tasks.append({
-            'upload_id': t['upload_id'],
-            'wechat_name': t.get('wechat_name'),
-            'user_name': t.get('user_name'),
-            'task_name': t.get('task_name'),
-            'original_filename': t.get('original_filename'),
-            'safe_filename': t.get('safe_filename'),
-            'upload_url': t.get('upload_url'),
-            'upload_size': t.get('upload_size'),
-            'output_dir': t.get('output_dir'),
-            'output_files': output_files,
-            'output_count': len(output_files),
-            'min_duration': t.get('min_duration'),
-            'status': t.get('status'),
-            'created_at': t.get('created_at'),
-            'completed_at': t.get('completed_at'),
-        })
+        task_data = _serialize_task(t)
+        task_data['output_files'] = output_files
+        task_data['output_count'] = len(output_files)
+        task_data['is_owner'] = bool(wechat_name and t.get('wechat_name') == wechat_name)
+        task_data['is_admin'] = is_admin
+        task_data['is_private'] = bool(t.get('is_private'))
+        tasks.append(task_data)
 
     return jsonify({
         'tasks': tasks,
-        'task_names': list_task_names(),
+        'task_names': list_task_names(include_deleted=is_admin, current_user=wechat_name),
+        'is_admin': is_admin,
+        'current_user': {
+            'wechat_name': wechat_name,
+            'is_admin': is_admin,
+        } if wechat_name else None,
     })
+
+
+@app.route('/api/task/<upload_id>/delete', methods=['POST'])
+def soft_delete_task_api(upload_id):
+    wechat_name = _require_login()
+    if not wechat_name:
+        return jsonify({'error': '请先登录后再操作', 'need_login': True}), 401
+    task = get_task(upload_id)
+    if not task:
+        return jsonify({'error': '任务不存在'}), 404
+    is_admin = is_admin_user(wechat_name)
+    is_owner = task.get('wechat_name') == wechat_name
+    if not (is_owner or is_admin):
+        return jsonify({'error': '只能删除自己的名场面哦'}), 403
+    soft_delete_task(upload_id)
+    logger.info('task soft-deleted upload_id=%s by=%s admin=%s', upload_id, wechat_name, is_admin)
+    return jsonify({'ok': True, 'message': '已隐藏，名场面已移入档案室回收站'})
+
+
+@app.route('/api/task/<upload_id>/restore', methods=['POST'])
+def restore_task_api(upload_id):
+    wechat_name = _require_login()
+    if not wechat_name:
+        return jsonify({'error': '请先登录后再操作', 'need_login': True}), 401
+    if not is_admin_user(wechat_name):
+        return jsonify({'error': '只有管理员可以恢复'}), 403
+    task = get_task(upload_id)
+    if not task:
+        return jsonify({'error': '任务不存在'}), 404
+    restore_task(upload_id)
+    logger.info('task restored upload_id=%s by=%s', upload_id, wechat_name)
+    return jsonify({'ok': True, 'message': '已恢复，名场面重新可见'})
 
 
 @app.route('/uploads/<filename>')
@@ -743,41 +967,123 @@ def output_file(upload_id, filename):
 
 @app.route('/api/delete/<upload_id>', methods=['DELETE'])
 def delete_upload(upload_id):
-    wechat_name = _require_wechat_name()
+    wechat_name = _require_login()
     if not wechat_name:
-        return jsonify({'error': '请先填写可爱的微信名再来操作哦 🧸'}), 400
+        return jsonify({'error': '请先登录后再操作哦 🧸', 'need_login': True}), 401
 
     task = get_task(upload_id)
     if not task:
         return jsonify({'error': 'Not found'}), 404
-    if task.get('wechat_name') and task['wechat_name'] != wechat_name:
+
+    is_admin = is_admin_user(wechat_name)
+    if task.get('wechat_name') and task['wechat_name'] != wechat_name and not is_admin:
         return jsonify({'error': '这个任务不属于你哦，删除权限不足 🙅'}), 403
 
-    upload_path = os.path.join(app.config['UPLOAD_FOLDER'])
-    output_path = os.path.join(app.config['OUTPUT_FOLDER'], upload_id)
-
-    deleted = False
-
-    if os.path.isdir(upload_path):
-        for f in os.listdir(upload_path):
-            if f.startswith(upload_id):
-                try:
-                    os.remove(os.path.join(upload_path, f))
-                    deleted = True
-                except OSError:
-                    pass
-
-    if os.path.exists(output_path):
-        shutil.rmtree(output_path, ignore_errors=True)
-        deleted = True
-
-    delete_task(upload_id)
-
-    if deleted or task:
-        logger.info(f'deleted upload_id={upload_id} wechat_name={wechat_name}')
+    if is_admin:
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'])
+        output_path = os.path.join(app.config['OUTPUT_FOLDER'], upload_id)
+        if os.path.isdir(upload_path):
+            for f in os.listdir(upload_path):
+                if f.startswith(upload_id):
+                    try:
+                        os.remove(os.path.join(upload_path, f))
+                    except OSError:
+                        pass
+        if os.path.exists(output_path):
+            shutil.rmtree(output_path, ignore_errors=True)
+        delete_task(upload_id)
+        logger.info(f'admin hard-deleted upload_id={upload_id} by={wechat_name}')
         return jsonify({'message': 'Deleted successfully'}), 200
-    else:
-        return jsonify({'error': 'Not found'}), 404
+
+    soft_delete_task(upload_id)
+    logger.info(f'soft-deleted upload_id={upload_id} by={wechat_name}')
+    return jsonify({'message': '已隐藏', 'ok': True}), 200
+
+
+@app.route('/api/merge/<upload_id>', methods=['POST'])
+def merge_segments(upload_id):
+    wechat_name = _require_wechat_name()
+    if not wechat_name:
+        return jsonify({'error': '请先填写微信名'}), 400
+
+    task = get_task(upload_id)
+    if not task:
+        return jsonify({'error': '任务不存在'}), 404
+    if task.get('wechat_name') and task['wechat_name'] != wechat_name:
+        return jsonify({'error': '无权操作此任务'}), 403
+    if task.get('status') not in ('completed',):
+        return jsonify({'error': '任务尚未处理完成'}), 400
+
+    data = request.get_json(silent=True) or {}
+    file_names = data.get('files') or []
+    if not file_names:
+        return jsonify({'error': '请选择要合并的片段'}), 400
+
+    output_dir_abs = os.path.join(app.config['OUTPUT_FOLDER'], upload_id)
+    if not os.path.isdir(output_dir_abs):
+        return jsonify({'error': '输出目录不存在'}), 404
+
+    list_file_path = os.path.join(output_dir_abs, '_merge_list.txt')
+    merged_filename = f'merged_{upload_id}_{int(datetime.utcnow().timestamp())}.mp4'
+    merged_path = os.path.join(output_dir_abs, merged_filename)
+
+    valid_files = []
+    for fname in file_names:
+        fpath = os.path.join(output_dir_abs, fname)
+        if os.path.isfile(fpath) and fname.endswith('.mp4') and os.path.getsize(fpath) > 10240:
+            valid_files.append(fpath)
+
+    if not valid_files:
+        return jsonify({'error': '没有有效的片段可合并'}), 400
+
+    try:
+        with open(list_file_path, 'w', encoding='utf-8') as lf:
+            for fp in valid_files:
+                escaped = fp.replace("'", "'\\''")
+                lf.write(f"file '{escaped}'\n")
+
+        command = [
+            'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error',
+            '-f', 'concat', '-safe', '0',
+            '-i', list_file_path,
+            '-c:v', 'libx264', '-preset', 'medium', '-crf', '23',
+            '-c:a', 'aac', '-b:a', '128k',
+            '-movflags', '+faststart',
+            merged_path
+        ]
+        import subprocess
+        result = subprocess.run(command, capture_output=True, text=True, timeout=300)
+        if result.returncode != 0:
+            logger.error('ffmpeg merge failed: %s', result.stderr)
+            return jsonify({'error': '合并失败: ' + result.stderr[-200:]}), 500
+
+        total_duration = 0
+        for fp in valid_files:
+            d = get_video_duration(fp)
+            if d:
+                total_duration += d
+        merged_size = os.path.getsize(merged_path)
+
+        try:
+            os.remove(list_file_path)
+        except Exception:
+            pass
+
+        logger.info(f'merged {len(valid_files)} segments for {upload_id}: {merged_filename}')
+        return jsonify({
+            'upload_id': upload_id,
+            'merged_file': merged_filename,
+            'url': f'/outputs/{upload_id}/{merged_filename}',
+            'size': merged_size,
+            'duration': total_duration,
+            'duration_str': format_duration(total_duration),
+            'segment_count': len(valid_files),
+        }), 200
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': '合并超时，请减少片段数量重试'}), 504
+    except Exception as e:
+        logger.exception('merge failed: %s', e)
+        return jsonify({'error': f'合并失败: {str(e)}'}), 500
 
 
 @app.route('/api/comments', methods=['GET'])
@@ -806,9 +1112,9 @@ def get_comments():
 
 @app.route('/api/comments', methods=['POST'])
 def create_comment():
-    wechat_name = _require_wechat_name()
+    wechat_name = _require_login()
     if not wechat_name:
-        return jsonify({'error': '请先填写可爱的微信名再来评论哦 🫶'}), 400
+        return jsonify({'error': '请先登录后再评论哦 🫶', 'need_login': True}), 401
 
     data = request.get_json(silent=True) or {}
     rating = data.get('rating', 0)

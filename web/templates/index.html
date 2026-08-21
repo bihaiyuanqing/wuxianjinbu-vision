@@ -305,16 +305,23 @@
             gap: 10px;
         }
 
+        .input-row input[type="text"],
+        .input-row input[type="password"],
         .input-row input[type="number"] {
             flex: 1;
-            padding: 10px 14px;
+            padding: 11px 14px;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             font-size: 15px;
             outline: none;
             transition: border-color 0.2s;
+            min-height: 44px;
+            box-sizing: border-box;
+            line-height: 1.4;
         }
 
+        .input-row input[type="text"]:focus,
+        .input-row input[type="password"]:focus,
         .input-row input[type="number"]:focus {
             border-color: #667eea;
         }
@@ -441,14 +448,14 @@
         }
 
         .output-list {
-            max-height: 500px;
+            max-height: 600px;
             overflow-y: auto;
         }
 
         .output-item {
             background: #f8f9fa;
             border-radius: 12px;
-            padding: 14px;
+            padding: 12px;
             margin-bottom: 10px;
             display: flex;
             align-items: center;
@@ -468,17 +475,29 @@
             flex-shrink: 0;
         }
 
-        .output-icon {
-            width: 44px;
-            height: 44px;
+        .output-thumb {
+            width: 80px;
+            height: 56px;
+            border-radius: 8px;
+            object-fit: cover;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
+            flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 20px;
-            flex-shrink: 0;
+            font-size: 24px;
+            overflow: hidden;
+        }
+
+        .output-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .output-icon {
+            display: none;
         }
 
         .output-info {
@@ -498,8 +517,9 @@
 
         .output-meta {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .output-meta-item {
@@ -513,6 +533,47 @@
         .output-meta-item.duration {
             color: #11998e;
             font-weight: 600;
+        }
+
+        .excitement-stars {
+            color: #ffb400;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+
+        .sort-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .sort-btn {
+            padding: 5px 12px;
+            border-radius: 999px;
+            border: 1px solid #e0e0e0;
+            background: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sort-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .merge-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+        }
+
+        .merge-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(17, 153, 142, 0.4) !important;
         }
 
         .download-btn {
@@ -675,19 +736,6 @@
             padding: 11px 14px;
         }
 
-        .input-row input[type="text"] {
-            flex: 1;
-            padding: 11px 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 15px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .input-row input[type="text"]:focus {
-            border-color: #667eea;
-        }
 
         .history-header {
             display: flex;
@@ -1212,6 +1260,39 @@
             border-color: #e1d4ff;
         }
 
+        .dy-comment-item.is-deleted {
+            opacity: 0.55;
+            background: #f5f5f7;
+            border-color: #e0e0e5;
+        }
+
+        .dy-comment-item.is-deleted .dy-avatar {
+            filter: grayscale(0.7);
+        }
+
+        .deleted-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            background: #999;
+            border-radius: 6px;
+            padding: 1px 7px;
+            margin-left: 6px;
+            vertical-align: middle;
+            letter-spacing: 0.5px;
+        }
+
+        .dy-delete-btn {
+            color: #c0392b !important;
+            font-size: 12px !important;
+        }
+
+        .dy-restore-btn {
+            color: #27ae60 !important;
+            font-size: 12px !important;
+        }
+
         .dy-avatar {
             width: 44px;
             height: 44px;
@@ -1468,7 +1549,7 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">🎯</div>
                 <div class="upload-text">把比赛录像甩这儿，球搭子帮你切名场面</div>
-                <div class="upload-hint">最大支持 <strong>30</strong> 分钟、<strong>600MB</strong>，10 分钟内的视频效果更快更好，3 分钟左右出结果 🏸</div>
+                <div class="upload-hint">最大 <strong>30</strong> 分钟 / <strong>600MB</strong>，10 分钟视频约 3 分钟出片～大家省着点用哦，服务器烧的都是羽毛钱 🪶💰</div>
                 <div class="upload-hint" style="margin-top:6px;color:#8f7cb7;">支持 MP4/MOV/QT/M4V/3GP/AVI/MKV/WEBM…手机 WiFi 上传更稳～</div>
             </div>
             <input type="file" id="fileInput" accept="video/*">
@@ -1499,9 +1580,9 @@
                         ⚙️ 切法配置
                         <span class="form-label-hint">（可选，先练球再出集锦）</span>
                     </label>
-                    <div class="input-row">
-                        <input type="number" id="minDurationInput" min="0" max="600" step="1" value="6" placeholder="例如 6">
-                        <span class="unit">秒以上的片段才入集锦（低质量网前互搓也能省则省 🌚）</span>
+                    <div class="input-row" style="flex-wrap: wrap; align-items: center;">
+                        <input type="number" id="minDurationInput" min="0" max="600" step="1" value="6" placeholder="例如 6" style="flex: 0 0 90px; min-width: 80px;">
+                        <span class="unit" style="white-space: normal; word-break: break-word; overflow-wrap: anywhere; line-height: 1.45; flex: 1 1 0; min-width: 0;">秒以上的片段才入集锦（低质量网前互搓也能省则省 🌚）</span>
                     </div>
                     <div style="font-size:12px;color:#999;margin-top:6px;">
                         💡 经验之谈：5~10 秒以上，大概率是一整段「多拍回合」；填 0 就是保留所有片段，主打一个原汁原味。
@@ -1533,6 +1614,13 @@
                 <button class="btn btn-secondary btn-small" id="resetFilterBtn">🧹 回满状态，全部都要</button>
             </div>
 
+            <div class="sort-bar" id="sortBar" style="display: none;">
+                <span style="font-size:12px;color:#999;font-weight:600;">✨ 排序：</span>
+                <button class="sort-btn active" data-sort="excitement">🔥 精彩度</button>
+                <button class="sort-btn" data-sort="duration">⏱️ 时长优先</button>
+                <button class="sort-btn" data-sort="original">📋 原始顺序</button>
+            </div>
+
             <div class="action-bar" id="actionBar" style="display: none;">
                 <div class="action-bar-left">
                     <div class="checkbox-wrap">
@@ -1542,8 +1630,11 @@
                     <span class="selected-count" id="selectedCount">已圈粉 0 段，准备下载</span>
                 </div>
                 <div class="action-bar-right">
-                    <button class="btn btn-success btn-small" id="downloadSelectedBtn" disabled>
-                        📥 一键抱走勾选（依次弹下载）
+                    <button class="btn btn-success btn-small merge-btn" id="mergeSelectedBtn" disabled>
+                        🎬 合并导出精彩集锦
+                    </button>
+                    <button class="btn btn-secondary btn-small" id="downloadSelectedBtn" disabled style="margin-left:8px;">
+                        📥 逐个下载
                     </button>
                 </div>
             </div>
@@ -1565,7 +1656,7 @@
                     <select id="historyTaskNameFilter">
                         <option value="">全场次（无差别档案室）</option>
                     </select>
-                    <button class="btn btn-secondary btn-small" id="historyRefreshBtn" type="button">🔄 看看又有谁进球了</button>
+                    <button class="btn btn-secondary btn-small" id="historyRefreshBtn" type="button">🔄 刷新看下谁又扣杀了</button>
                 </div>
             </div>
 
@@ -1601,7 +1692,7 @@
                         id="commentContent"
                         class="comment-textarea"
                         maxlength="500"
-                        placeholder="比如：识别超级准！🏸 要是能一键保存到相册就更好啦 💗 或者：3 分钟的视频 10 秒就出结果好惊喜哇 🌟 之类的，都可以告诉我～"></textarea>
+                        placeholder="别光发表情哦～写两句呗（写得越多，进步越快乐）🏸 你的一句话，就是下个版本的功能——主打快乐，顺带进步"></textarea>
                     <div class="emoji-bar" id="emojiBar">
                         <span class="emoji-cell"><button type="button" class="emoji-btn" data-emoji="🫡" title="敬礼 Yes Sir">🫡</button><span class="emoji-label">敬礼</span></span>
                         <span class="emoji-cell"><button type="button" class="emoji-btn" data-emoji="🙋" title="举个小手">🙋</button><span class="emoji-label">举手</span></span>
@@ -1675,24 +1766,32 @@
         <div class="modal-dialog">
             <div class="identity-modal-emoji" id="identityModalEmoji">🏸</div>
             <div class="modal-title" id="identityModalTitle">先在球馆登记一下你的名字呀～</div>
-            <div class="modal-desc">
+            <div class="modal-desc" id="identityModalDesc">
                 用你最常用的微信名就可以啦，它会变成你的专属小名片：
                 <br>
-                · 后续上传 / 处理的历史任务只对你自己可见
+                · 上传视频、处理任务、留言都需要登录
                 <br>
                 · 留言墙也会用这个名字署名哦 ✍️
             </div>
-            <div class="input-row">
+            <div class="input-row" id="identityNameRow">
                 <input type="text" id="identityInput" placeholder="例如：小羽毛 / 阿Li / 小七的羽毛球" maxlength="32" autocomplete="off">
             </div>
-            <div class="identity-modal-tips">
-                💡 名字会保存在你现在的浏览器里，下次打开还能认出你。
+            <div class="input-row" id="identityPasswordRow" style="display:none;">
+                <input type="password" id="identityPasswordInput" placeholder="请输入密码（至少4位）" maxlength="32" autocomplete="off">
+                <button type="button" id="togglePasswordBtn" style="margin-left:8px;padding:0 8px;background:none;border:none;cursor:pointer;font-size:18px;">👁️</button>
+            </div>
+            <div class="input-row" id="identityPassword2Row" style="display:none;">
+                <input type="password" id="identityPassword2Input" placeholder="请再次输入密码确认" maxlength="32" autocomplete="off">
+            </div>
+            <div class="identity-modal-tips" id="identityModalTips">
+                💡 名字和登录状态会保存在你现在的浏览器里。
                 <br>
-                🍬 想换身份随时可以点顶部「换个球场昵称」，不过换了以后就看不到之前身份下的历史任务咯～
+                🍬 第一次使用这个名字会提示你设置密码哦～
             </div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" id="identityCancelBtn" type="button">先不登记，偷偷看</button>
-                <button class="btn btn-primary" id="identityConfirmBtn" type="button">就用这个身份上场 🏸</button>
+                <button class="btn btn-secondary" id="identityBackBtn" type="button" style="display:none;">← 返回</button>
+                <button class="btn btn-secondary" id="identityCancelBtn" type="button">先不登录，偷偷看</button>
+                <button class="btn btn-primary" id="identityConfirmBtn" type="button">下一步 ▶</button>
             </div>
         </div>
     </div>
@@ -1703,10 +1802,16 @@
             <div class="modal-desc">
                 填了微信名，「往届名场面」一搜就是你自己的集锦册；
                 <br>
-                不填我就默认你叫「神秘打球人」，档案室里可是找不到你哦。
+                不填我就默认用你的登录昵称啦。
             </div>
             <div class="input-row">
                 <input type="text" id="taskNameInput" placeholder="例如：张三 · 周三晚场 vs 李哥" maxlength="40" autocomplete="off">
+            </div>
+            <div class="input-row" style="margin-top:8px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#666;">
+                    <input type="checkbox" id="isPrivateCheckbox">
+                    🔒 仅自己可见（勾选后其他人看不到这场球）
+                </label>
             </div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="taskNameCancelBtn" type="button">先不打了，下次再说</button>
@@ -1750,12 +1855,20 @@
     </script>
     <script>
         const WECHAT_NAME_STORAGE_KEY = 'badminton:wechat_name';
+        const AUTH_TOKEN_STORAGE_KEY = 'badminton:auth_token';
         let wechatName = '';
+        let authToken = '';
+        let isAdmin = false;
+        let authStep = 'name';
+        let pendingWechatName = '';
         let commentRating = 0;
         let currentUpload = null;
         let currentOutputFiles = [];
         let filteredOutputFiles = [];
+        let originalOutputOrder = [];
+        let currentSortMode = 'excitement';
         let selectedUrls = new Set();
+        let mergedFiles = [];
         let lastHistoryPayload = { tasks: [], task_names: [] };
         let lastCommentsPayload = { comments: [], stats: {} };
         let currentHistoryFilter = '';
@@ -1808,8 +1921,19 @@
         const identityInput = document.getElementById('identityInput');
         const identityConfirmBtn = document.getElementById('identityConfirmBtn');
         const identityCancelBtn = document.getElementById('identityCancelBtn');
-        const identityModalEmoji = document.getElementById('identityModalEmoji');
+        const identityBackBtn = document.getElementById('identityBackBtn');
+        const identityPasswordInput = document.getElementById('identityPasswordInput');
+        const identityPassword2Input = document.getElementById('identityPassword2Input');
+        const identityNameRow = document.getElementById('identityNameRow');
+        const identityPasswordRow = document.getElementById('identityPasswordRow');
+        const identityPassword2Row = document.getElementById('identityPassword2Row');
         const identityModalTitle = document.getElementById('identityModalTitle');
+        const identityModalDesc = document.getElementById('identityModalDesc');
+        const identityModalTips = document.getElementById('identityModalTips');
+        const identityModalEmoji = document.getElementById('identityModalEmoji');
+        const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+
+        const isPrivateCheckbox = document.getElementById('isPrivateCheckbox');
 
         const commentRatingEl = document.getElementById('commentRating');
         const commentContentEl = document.getElementById('commentContent');
@@ -1930,8 +2054,81 @@
             return HOSTED_BASE + path;
         }
 
+        function getAuthHeader() {
+            const headers = {};
+            if (authToken) {
+                headers['X-Auth-Token'] = authToken;
+            }
+            return headers;
+        }
+
         function getWechatHeader() {
-            return wechatName ? { 'X-Wechat-Name': encodeURIComponent(wechatName) } : {};
+            return getAuthHeader();
+        }
+
+        function loadAuthToken() {
+            try {
+                return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function saveAuth(name, token, admin) {
+            wechatName = (name || '').slice(0, 32);
+            authToken = token || '';
+            isAdmin = !!admin;
+            try {
+                window.localStorage.setItem(WECHAT_NAME_STORAGE_KEY, wechatName);
+                window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, authToken);
+            } catch (e) {}
+            renderIdentity();
+        }
+
+        function clearAuth() {
+            wechatName = '';
+            authToken = '';
+            isAdmin = false;
+            try {
+                window.localStorage.removeItem(WECHAT_NAME_STORAGE_KEY);
+                window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+            } catch (e) {}
+            renderIdentity();
+        }
+
+        function setIdentityStep(step) {
+            authStep = step;
+            if (step === 'name') {
+                identityNameRow.style.display = '';
+                identityPasswordRow.style.display = 'none';
+                identityPassword2Row.style.display = 'none';
+                identityBackBtn.style.display = 'none';
+                identityConfirmBtn.textContent = '下一步 ▶';
+                identityModalTitle.textContent = '先在球馆登记一下你的名字呀～';
+                identityModalDesc.innerHTML = '用你最常用的微信名就可以啦，它会变成你的专属小名片：<br>· 上传视频、处理任务、留言都需要登录<br>· 留言墙也会用这个名字署名哦 ✍️';
+                identityModalTips.innerHTML = '💡 第一次使用这个名字会提示你设置密码哦～';
+                setTimeout(() => identityInput && identityInput.focus(), 50);
+            } else if (step === 'login') {
+                identityNameRow.style.display = 'none';
+                identityPasswordRow.style.display = 'flex';
+                identityPassword2Row.style.display = 'none';
+                identityBackBtn.style.display = '';
+                identityConfirmBtn.textContent = '登录 🏸';
+                identityModalTitle.textContent = '🔐 欢迎回来！请输入密码';
+                identityModalDesc.innerHTML = `欢迎回来 <strong>${escapeHtml(pendingWechatName)}</strong>，请输入你的密码登录`;
+                identityModalTips.innerHTML = '💡 密码是你第一次使用这个名字时设置的哦';
+                setTimeout(() => identityPasswordInput && identityPasswordInput.focus(), 50);
+            } else if (step === 'register') {
+                identityNameRow.style.display = 'none';
+                identityPasswordRow.style.display = 'flex';
+                identityPassword2Row.style.display = 'flex';
+                identityBackBtn.style.display = '';
+                identityConfirmBtn.textContent = '完成注册 🎉';
+                identityModalTitle.textContent = '🎀 第一次来呀，设个密码吧';
+                identityModalDesc.innerHTML = `你好 <strong>${escapeHtml(pendingWechatName)}</strong>！设置一个密码，以后就用这个名字+密码登录啦<br>密码至少4位，记牢哦～`;
+                identityModalTips.innerHTML = '⚠️ 密码请妥善保管，暂时不支持自助找回哦';
+                setTimeout(() => identityPasswordInput && identityPasswordInput.focus(), 50);
+            }
         }
 
         function loadWechatName() {
@@ -1966,37 +2163,140 @@
             }
             identityBar.style.display = 'flex';
             if (identityAvatar) identityAvatar.textContent = identityInitialChar(wechatName);
-            if (identityName) identityName.textContent = wechatName;
+            let displayName = wechatName;
+            if (isAdmin) displayName = '👑 ' + displayName;
+            if (identityName) identityName.textContent = displayName;
             if (typeof window.parseEmojiIfAble === 'function') window.parseEmojiIfAble(identityBar);
+        }
+
+        function resetIdentityModal() {
+            pendingWechatName = '';
+            if (identityInput) identityInput.value = '';
+            if (identityPasswordInput) identityPasswordInput.value = '';
+            if (identityPassword2Input) identityPassword2Input.value = '';
+            if (identityPasswordInput) identityPasswordInput.type = 'password';
+            if (identityPassword2Input) identityPassword2Input.type = 'password';
+            setIdentityStep('name');
         }
 
         function openIdentityModal(isEdit = false) {
             if (!identityModal) return;
-            if (identityInput) identityInput.value = wechatName;
-            if (identityModalTitle) identityModalTitle.textContent = isEdit ? '换一个可爱的身份吧 🔁' : '先告诉我你叫什么名字呀～';
+            resetIdentityModal();
+            if (isEdit && wechatName) {
+                clearAuth();
+                showToast('已退出登录，请重新登录哦～');
+            }
             const rotators = ['🌸', '🏸', '🧸', '💗', '🌟', '🍑', '🐶', '🐱', '🎐'];
             if (identityModalEmoji) identityModalEmoji.textContent = rotators[Math.floor(Math.random() * rotators.length)];
             identityModal.classList.add('show');
             if (typeof window.parseEmojiIfAble === 'function') window.parseEmojiIfAble(identityModal);
-            if (identityInput) setTimeout(() => identityInput.focus(), 50);
         }
 
         function closeIdentityModal() {
             if (identityModal) identityModal.classList.remove('show');
         }
 
-        identityConfirmBtn && identityConfirmBtn.addEventListener('click', () => {
-            const value = (identityInput && identityInput.value || '').trim();
-            if (!value) {
-                showWarnToast('先填个名字再走嘛，不然档案室不认你～');
-                identityInput && identityInput.focus();
-                return;
+        async function handleIdentityConfirm() {
+            if (authStep === 'name') {
+                const value = (identityInput && identityInput.value || '').trim();
+                if (!value) {
+                    showWarnToast('先填个名字再走嘛～');
+                    identityInput && identityInput.focus();
+                    return;
+                }
+                pendingWechatName = value;
+                identityConfirmBtn.disabled = true;
+                try {
+                    const resp = await fetch(safeApiUrl('/api/auth/check'), {
+                        ...FETCH_OPTIONS_BASE,
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wechat_name: value })
+                    });
+                    const data = await resp.json();
+                    if (data.exists) {
+                        setIdentityStep('login');
+                    } else {
+                        setIdentityStep('register');
+                    }
+                } catch (e) {
+                    showErrorToast('网络错误，请重试');
+                } finally {
+                    identityConfirmBtn.disabled = false;
+                }
+            } else if (authStep === 'login') {
+                const password = (identityPasswordInput && identityPasswordInput.value || '');
+                if (!password) {
+                    showWarnToast('请输入密码');
+                    identityPasswordInput && identityPasswordInput.focus();
+                    return;
+                }
+                identityConfirmBtn.disabled = true;
+                try {
+                    const resp = await fetch(safeApiUrl('/api/auth/login'), {
+                        ...FETCH_OPTIONS_BASE,
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wechat_name: pendingWechatName, password: password })
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok) {
+                        showWarnToast(data.error || '登录失败');
+                        return;
+                    }
+                    saveAuth(pendingWechatName, data.token, data.user && data.user.is_admin);
+                    closeIdentityModal();
+                    showSuccessToast(`${pendingWechatName}，欢迎回来！今晚打球开心哦 🏸`);
+                    loadHistory();
+                    loadComments();
+                } catch (e) {
+                    showErrorToast('网络错误，请重试');
+                } finally {
+                    identityConfirmBtn.disabled = false;
+                }
+            } else if (authStep === 'register') {
+                const p1 = (identityPasswordInput && identityPasswordInput.value || '');
+                const p2 = (identityPassword2Input && identityPassword2Input.value || '');
+                if (p1.length < 4) {
+                    showWarnToast('密码至少4位哦');
+                    identityPasswordInput && identityPasswordInput.focus();
+                    return;
+                }
+                if (p1 !== p2) {
+                    showWarnToast('两次输入的密码不一致');
+                    identityPassword2Input && identityPassword2Input.focus();
+                    return;
+                }
+                identityConfirmBtn.disabled = true;
+                try {
+                    const resp = await fetch(safeApiUrl('/api/auth/register'), {
+                        ...FETCH_OPTIONS_BASE,
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wechat_name: pendingWechatName, password: p1 })
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok) {
+                        showWarnToast(data.error || '注册失败');
+                        return;
+                    }
+                    saveAuth(pendingWechatName, data.token, data.user && data.user.is_admin);
+                    closeIdentityModal();
+                    showSuccessToast(`注册成功！${pendingWechatName}，欢迎来到无限进步球场！🎉`);
+                    loadHistory();
+                    loadComments();
+                } catch (e) {
+                    showErrorToast('网络错误，请重试');
+                } finally {
+                    identityConfirmBtn.disabled = false;
+                }
             }
-            saveWechatName(value);
-            closeIdentityModal();
-            showSuccessToast(`${value}，欢迎来到无限进步球场！今晚主打快乐，顺便切几段名场面～`);
-            loadHistory();
-            loadComments();
+        }
+
+        identityConfirmBtn && identityConfirmBtn.addEventListener('click', handleIdentityConfirm);
+
+        identityBackBtn && identityBackBtn.addEventListener('click', () => {
+            setIdentityStep('name');
         });
 
         identityCancelBtn && identityCancelBtn.addEventListener('click', () => {
@@ -2004,8 +2304,18 @@
                 closeIdentityModal();
                 return;
             }
-            showToast('没填身份也能偷看，但上传和开切会先叫你登记哦 🫣');
+            showToast('不登录也能偷看，但上传、评论会先叫你登录哦 🫣');
             closeIdentityModal();
+        });
+
+        togglePasswordBtn && togglePasswordBtn.addEventListener('click', () => {
+            if (identityPasswordInput) {
+                identityPasswordInput.type = identityPasswordInput.type === 'password' ? 'text' : 'password';
+            }
+            if (identityPassword2Input) {
+                identityPassword2Input.type = identityPassword2Input.type === 'password' ? 'text' : 'password';
+            }
+            togglePasswordBtn.textContent = togglePasswordBtn.textContent === '👁️' ? '🙈' : '👁️';
         });
 
         identityModal && identityModal.addEventListener('click', (e) => {
@@ -2019,14 +2329,39 @@
             if (e.key === 'Escape' && wechatName) closeIdentityModal();
         });
 
-        identityEditBtn && identityEditBtn.addEventListener('click', () => openIdentityModal(true));
+        [identityPasswordInput, identityPassword2Input].forEach(input => {
+            input && input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && identityConfirmBtn) identityConfirmBtn.click();
+            });
+        });
 
-        function requireWechatName(actionName) {
-            if (wechatName) return true;
+        identityEditBtn && identityEditBtn.addEventListener('click', () => {
+            if (wechatName) {
+                if (confirm('确定要退出登录吗？')) {
+                    fetch(safeApiUrl('/api/auth/logout'), {
+                        ...FETCH_OPTIONS_BASE,
+                        method: 'POST',
+                        headers: getAuthHeader()
+                    }).catch(() => {});
+                    clearAuth();
+                    showToast('已退出登录');
+                    loadHistory();
+                }
+            } else {
+                openIdentityModal(false);
+            }
+        });
+
+        function requireLogin(actionName) {
+            if (wechatName && authToken) return true;
             openIdentityModal(false);
-            const tip = actionName ? `先登记球场身份才能${actionName}哦，不然档案室找不到你这号人🌝` : '先登记球场身份哦，球馆有你更热闹～';
+            const tip = actionName ? `请先登录才能${actionName}哦 🔐` : '请先登录哦 🔐';
             setTimeout(() => showWarnToast(tip, 3000), 60);
             return false;
+        }
+
+        function requireWechatName(actionName) {
+            return requireLogin(actionName);
         }
 
         function setCommentRating(value) {
@@ -2344,6 +2679,20 @@
         }
 
         function handleFile(file) {
+            uploadArea.style.display = 'none';
+            progressContainer.style.display = 'block';
+            videoPreview.style.display = 'none';
+            resultCard.style.display = 'none';
+            durationWarnEl.style.display = 'none';
+            estimateCardEl.style.display = 'none';
+            progressFill.style.width = '1%';
+            progressText.textContent = '🔍 正在检查视频信息…';
+
+            const resetUploadArea = () => {
+                uploadArea.style.display = '';
+                progressContainer.style.display = 'none';
+            };
+
             const allowedExtensions = ['mp4', 'mov', 'qt', 'm4v', '3gp', 'avi', 'mkv', 'flv', 'wmv', 'webm', 'mts', 'm2ts'];
             const fileExtension = file.name.split('.').pop().toLowerCase();
             const isValidByType = file.type.startsWith('video/');
@@ -2351,14 +2700,20 @@
             
             if (!isValidByType && !isValidByExt) {
                 showWarnToast('这颗球出界了～请上传 MP4/MOV/QT/AVI 等视频文件');
+                resetUploadArea();
                 return;
             }
             const maxSizeMb = (runtimeConfig && runtimeConfig.max_upload_mb) || 600;
             if (file.size > maxSizeMb * 1024 * 1024) {
                 showWarnToast(`视频文件太大了～单条最大 ${maxSizeMb}MB，当前 ${(file.size / 1024 / 1024).toFixed(1)}MB，请压缩或裁剪后再传`);
+                resetUploadArea();
                 return;
             }
-            if (!requireWechatName('上传视频')) return;
+            if (!requireWechatName('上传视频')) {
+                resetUploadArea();
+                return;
+            }
+            progressText.textContent = '⏳ 读取视频时长…';
             const recommendedMinutes = (runtimeConfig && runtimeConfig.recommended_max_duration_minutes) || 10;
             const hardMaxSeconds = (runtimeConfig && runtimeConfig.hard_max_duration_seconds) || 30 * 60;
             const probeVideo = document.createElement('video');
@@ -2382,6 +2737,7 @@
                 if (preSeconds > 0) {
                     if (preSeconds > hardMaxSeconds) {
                         showWarnToast(`视频时长 ${Math.round(preSeconds / 60 * 10) / 10} 分钟，超过 ${Math.round(hardMaxSeconds / 60)} 分钟硬上限，请裁剪后再上传`);
+                        resetUploadArea();
                         return;
                     }
                     const preMinutes = Math.ceil(preSeconds / 60);
@@ -2391,6 +2747,7 @@
                         );
                         if (!ok) {
                             showWarnToast('先暂停发球～可以在手机相册里裁到 ' + recommendedMinutes + ' 分钟以内再来哦');
+                            resetUploadArea();
                             return;
                         }
                     }
@@ -2403,6 +2760,7 @@
             const formData = new FormData();
             formData.append('file', file);
             formData.append('wechat_name', wechatName);
+            formData.append('is_private', '0');
 
             uploadArea.style.display = 'none';
             progressContainer.style.display = 'block';
@@ -2414,7 +2772,9 @@
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/api/upload');
             try {
-                xhr.setRequestHeader('X-Wechat-Name', encodeURIComponent(wechatName));
+                if (authToken) {
+                    xhr.setRequestHeader('X-Auth-Token', authToken);
+                }
             } catch (e) {}
 
             xhr.upload.addEventListener('progress', (e) => {
@@ -2434,7 +2794,7 @@
 
                     previewVideo.src = currentUpload.url;
                     const infoParts = [
-                        `🎬 录像: ${escapeHtml(currentUpload.filename)}`,
+                        `🎬 录像: ${escapeHtml(truncateFilename(currentUpload.filename))}`,
                         `💾 球包大小: ${formatSize(currentUpload.size)}`,
                         `🙋 归属: ${escapeHtml(currentUpload.wechat_name || wechatName)}`
                     ];
@@ -2488,11 +2848,22 @@
             resultCard.style.display = 'none';
             durationWarnEl.style.display = 'none';
             estimateCardEl.style.display = 'none';
+            filterBar.style.display = 'none';
+            sortBar.style.display = 'none';
+            actionBar.style.display = 'none';
+            const mergedContainer = document.getElementById('mergedResultContainer');
+            if (mergedContainer) mergedContainer.remove();
             fileInput.value = '';
             currentUpload = null;
             currentOutputFiles = [];
             filteredOutputFiles = [];
+            originalOutputOrder = [];
+            mergedFiles = [];
             selectedUrls.clear();
+            currentSortMode = 'excitement';
+            document.querySelectorAll('.sort-btn').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-sort') === 'excitement');
+            });
         }
 
         reuploadBtn.addEventListener('click', resetUpload);
@@ -2519,9 +2890,19 @@
             if (e.key === 'Escape') closeTaskNameModal();
         });
 
-        taskNameConfirmBtn && taskNameConfirmBtn.addEventListener('click', async () => {
+        processBtn.addEventListener('click', () => {
+            if (!currentUpload) return;
             if (!requireWechatName('开始处理')) return;
-            const raw = (taskNameInput.value || '').trim() || '神秘打球人';
+            if (wechatName) {
+                startProcessing(wechatName);
+            } else {
+                openTaskNameModal();
+            }
+        });
+
+        async function startProcessing(raw) {
+            if (!currentUpload) return;
+            raw = (raw || '').trim() || wechatName || '神秘打球人';
             try {
                 window.localStorage.setItem('badminton:last_task_name', raw);
             } catch (e) {}
@@ -2551,7 +2932,84 @@
 
             processBtn.disabled = true;
             processSpinner.style.display = 'inline-block';
-            processBtn.innerHTML = '<span class="loading-spinner" id="processSpinner"></span>主裁判正在回放鹰眼…进度拉满中 ⏳';
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '1%';
+            progressText.textContent = '🎯 任务已提交，正在排队处理…';
+            videoPreview.style.display = 'none';
+
+            let eventSource = null;
+            let closed = false;
+
+            function cleanupSSE() {
+                if (eventSource) {
+                    try { eventSource.close(); } catch (e) {}
+                    eventSource = null;
+                }
+            }
+
+            function onTaskUpdate(data) {
+                if (!data) return;
+                const status = data.status || '';
+                const progress = Math.max(0, Math.min(100, Math.round((Number(data.progress) || 0) * 100)));
+                const msg = data.progress_message || '处理中…';
+                progressFill.style.width = progress + '%';
+                progressText.textContent = `${msg} (${progress}%)`;
+
+                if (status === 'completed') {
+                    if (closed) return;
+                    closed = true;
+                    cleanupSSE();
+                    const result = data.result || {};
+                    currentOutputFiles = result.output_files || [];
+                    originalOutputOrder = [...currentOutputFiles];
+                    applySortAndFilter();
+                    selectedUrls.clear();
+                    progressFill.style.width = '100%';
+                    progressText.textContent = '🎉 处理完成！正在加载结果…';
+                    showSuccessToast(`名场面产出完毕！共切出 ${currentOutputFiles.length} 段精华，今晚 B 站素材有了`);
+                    renderStats({ success_count: currentOutputFiles.length });
+                    renderOutputs();
+                    resultCard.style.display = 'block';
+                    progressContainer.style.display = 'none';
+                    videoPreview.style.display = 'block';
+                    if (currentOutputFiles.length > 0) {
+                        filterBar.style.display = 'flex';
+                        sortBar.style.display = 'flex';
+                        actionBar.style.display = 'flex';
+                    }
+                    processBtn.disabled = false;
+                    processSpinner.style.display = 'none';
+                    processBtn.textContent = '再来一球（重切）';
+                    loadHistory();
+                } else if (status === 'failed') {
+                    if (closed) return;
+                    closed = true;
+                    cleanupSSE();
+                    progressContainer.style.display = 'none';
+                    videoPreview.style.display = 'block';
+                    showErrorToast('处理失败：' + (data.error || '未知错误'));
+                    processBtn.disabled = false;
+                    processSpinner.style.display = 'none';
+                    processBtn.textContent = '再来一球（重切）';
+                }
+            }
+
+            function pollTaskStatus() {
+                if (closed) return;
+                fetch(`/api/task/${currentUpload.upload_id}/status`, {
+                    headers: { ...getWechatHeader() }
+                })
+                .then(r => r.json().catch(() => null))
+                .then(data => {
+                    if (data) onTaskUpdate(data);
+                    if (!closed && data && data.status !== 'completed' && data.status !== 'failed') {
+                        setTimeout(pollTaskStatus, 1500);
+                    }
+                })
+                .catch(() => {
+                    if (!closed) setTimeout(pollTaskStatus, 2000);
+                });
+            }
 
             fetch('/api/process', {
                 method: 'POST',
@@ -2566,41 +3024,67 @@
                     task_name: raw,
                     user_name: raw,
                     wechat_name: wechatName,
+                    is_private: isPrivateCheckbox ? isPrivateCheckbox.checked : false,
                 })
             })
             .then(response => parseJsonOrFriendly(response))
             .then(data => {
-                if (data && data.status === 'completed') {
-                    currentOutputFiles = data.output_files || [];
-                    filteredOutputFiles = [...currentOutputFiles];
-                    selectedUrls.clear();
-                    
-                    showSuccessToast(`名场面产出完毕！共切出 **${data.success_count || 0} 段精华**，今晚 B 站素材有了`);
-                    renderStats(data);
-                    renderOutputs();
-                    resultCard.style.display = 'block';
-                    if (currentOutputFiles.length > 0) {
-                        filterBar.style.display = 'flex';
-                        actionBar.style.display = 'flex';
+                if (data && data.error) {
+                    showErrorToast('提交失败：' + data.error);
+                    cleanupSSE();
+                    processBtn.disabled = false;
+                    processSpinner.style.display = 'none';
+                    processBtn.textContent = '主裁判吹哨，开切！';
+                    progressContainer.style.display = 'none';
+                    videoPreview.style.display = 'block';
+                    return;
+                }
+                if (data && data.status === 'completed' && data.output_files) {
+                    onTaskUpdate({ status: 'completed', progress: 1, result: data });
+                    return;
+                }
+                progressFill.style.width = '2%';
+                progressText.textContent = data.progress_message || '🏸 处理已开始…';
+
+                if (!!window.EventSource) {
+                    try {
+                        const es = new EventSource(`/api/task/${currentUpload.upload_id}/events`);
+                        eventSource = es;
+                        es.onmessage = (e) => {
+                            try {
+                                const d = JSON.parse(e.data);
+                                onTaskUpdate(d);
+                            } catch (err) {
+                                console.warn('SSE parse error', err);
+                            }
+                        };
+                        es.onerror = () => {
+                            cleanupSSE();
+                            if (!closed) pollTaskStatus();
+                        };
+                    } catch (e) {
+                        cleanupSSE();
+                        pollTaskStatus();
                     }
-                    loadHistory();
                 } else {
-                    showErrorToast('哎呀这颗球打框了～错误：' + (data && data.error ? data.error : '主裁判摇了摇头'));
+                    pollTaskStatus();
                 }
             })
             .catch(err => {
-                showErrorToast('处理出错：' + (err && err.message ? err.message : '网络异常'));
-            })
-            .finally(() => {
+                showErrorToast('提交失败：' + (err && err.message ? err.message : '网络异常'));
+                cleanupSSE();
                 processBtn.disabled = false;
                 processSpinner.style.display = 'none';
-                processBtn.textContent = '再来一球（重切）';
+                processBtn.textContent = '主裁判吹哨，开切！';
+                progressContainer.style.display = 'none';
+                videoPreview.style.display = 'block';
             });
-        });
+        }
 
-        processBtn.addEventListener('click', () => {
-            if (!currentUpload) return;
-            openTaskNameModal();
+        taskNameConfirmBtn && taskNameConfirmBtn.addEventListener('click', () => {
+            if (!requireWechatName('开始处理')) return;
+            const raw = (taskNameInput.value || '').trim() || wechatName || '神秘打球人';
+            startProcessing(raw);
         });
 
         function renderStats(data) {
@@ -2643,14 +3127,19 @@
                 return;
             }
 
-            outputList.innerHTML = files.map(file => {
+            outputList.innerHTML = files.map((file, idx) => {
                 const checked = selectedUrls.has(file.url) ? 'checked' : '';
+                const stars = file.excitement_stars || 3;
+                const starHtml = '⭐'.repeat(stars) + '<span style="color:#ddd;">☆</span>'.repeat(5 - stars);
+                const thumbHtml = file.thumbnail_url
+                    ? `<div class="output-thumb"><img src="${file.thumbnail_url}" alt="封面" loading="lazy"></div>`
+                    : `<div class="output-thumb">🎬</div>`;
                 return `
                     <div class="output-item">
-                        <input type="checkbox" class="item-checkbox" data-url="${file.url}" ${checked}>
-                        <div class="output-icon">🎬</div>
+                        <input type="checkbox" class="item-checkbox" data-url="${file.url}" data-name="${file.name}" ${checked}>
+                        ${thumbHtml}
                         <div class="output-info">
-                            <div class="output-name">${file.name}</div>
+                            <div class="output-name">第${idx+1}名 · ${file.name}</div>
                             <div class="output-meta">
                                 <span class="output-meta-item duration">
                                     ⏱️ ${file.duration_str || formatDurationSec(file.duration)}
@@ -2658,6 +3147,7 @@
                                 <span class="output-meta-item">
                                     💾 ${formatSize(file.size)}
                                 </span>
+                                <span class="excitement-stars">${starHtml}</span>
                             </div>
                         </div>
                         <a href="${file.url}" download="${file.name}" class="download-btn" title="单独下载这一段">
@@ -2687,6 +3177,7 @@
             const count = selectedUrls.size;
             selectedCount.textContent = `已圈粉 ${count} 段，准备下载`;
             downloadSelectedBtn.disabled = count === 0;
+            mergeSelectedBtn.disabled = count < 2;
 
             const visible = filteredOutputFiles.filter(f => selectedUrls.has(f.url)).length;
             const totalVisible = filteredOutputFiles.length;
@@ -2712,28 +3203,130 @@
         });
 
         applyFilterBtn.addEventListener('click', () => {
-            const min = viewMinDuration.value ? parseFloat(viewMinDuration.value) : 0;
-            filteredOutputFiles = currentOutputFiles.filter(f => {
-                const d = f.duration || 0;
-                return d >= min;
-            });
+            applySortAndFilter();
             if (filteredOutputFiles.length === 0 && (currentOutputFiles || []).length > 0) {
                 showWarnToast('这阈值设得太狠啦，精彩片段都被过滤光了🌚', 2500);
             } else {
-                showSuccessToast(`筛选出 ${filteredOutputFiles.length} 段「长回合」片段`);
+                const min = viewMinDuration.value ? parseFloat(viewMinDuration.value) : 0;
+                showSuccessToast(`筛选出 ${filteredOutputFiles.length} 段「${min > 0 ? '≥' + min + '秒' : '所有'}」片段`);
             }
             renderOutputs();
         });
 
         resetFilterBtn.addEventListener('click', () => {
             viewMinDuration.value = '';
-            filteredOutputFiles = [...currentOutputFiles];
+            applySortAndFilter();
             renderOutputs();
             showToast('已回满状态，所有片段回来啦 🎉');
         });
 
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.getAttribute('data-sort');
+                currentSortMode = mode;
+                document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applySortAndFilter();
+                renderOutputs();
+            });
+        });
+
+        function applySortAndFilter() {
+            const min = viewMinDuration.value ? parseFloat(viewMinDuration.value) : 0;
+            let files = [...currentOutputFiles];
+            if (min > 0) {
+                files = files.filter(f => (f.duration || 0) >= min);
+            }
+            if (currentSortMode === 'excitement') {
+                files.sort((a, b) => (b.excitement_score || 0) - (a.excitement_score || 0));
+            } else if (currentSortMode === 'duration') {
+                files.sort((a, b) => (b.duration || 0) - (a.duration || 0));
+            } else if (currentSortMode === 'original') {
+                const nameToIndex = {};
+                originalOutputOrder.forEach((f, i) => { nameToIndex[f.name] = i; });
+                files.sort((a, b) => (nameToIndex[a.name] ?? 999) - (nameToIndex[b.name] ?? 999));
+            }
+            filteredOutputFiles = files;
+        }
+
+        mergeSelectedBtn.addEventListener('click', async () => {
+            const toMerge = [...filteredOutputFiles].filter(f => selectedUrls.has(f.url));
+            if (toMerge.length === 0) {
+                showWarnToast('先勾选几段精彩片段再来合并哦～');
+                return;
+            }
+            if (toMerge.length < 2) {
+                showWarnToast('至少勾选2段才能合并呀，一段直接下载就行啦～');
+                return;
+            }
+            if (!currentUpload) {
+                showErrorToast('找不到当前任务信息');
+                return;
+            }
+            const uploadId = currentUpload.upload_id;
+            const originalText = mergeSelectedBtn.textContent;
+            mergeSelectedBtn.disabled = true;
+            mergeSelectedBtn.textContent = '🎬 合并中，请稍候…';
+            showToast(`正在为你合并 ${toMerge.length} 段精彩集锦，大约需要几十秒…`);
+            try {
+                const resp = await fetch(`/api/merge/${uploadId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ files: toMerge.map(f => f.name) })
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.error || '合并失败');
+                }
+                mergedFiles.push({
+                    name: data.merged_file,
+                    url: data.url,
+                    size: data.size,
+                    duration: data.duration,
+                    duration_str: data.duration_str,
+                });
+                showSuccessToast(`🎉 合并完成！共 ${data.segment_count} 段，总时长 ${data.duration_str}，点击下方按钮下载`);
+                renderMergedResult(data);
+            } catch (e) {
+                showErrorToast('合并失败：' + e.message);
+            } finally {
+                mergeSelectedBtn.disabled = false;
+                mergeSelectedBtn.textContent = originalText;
+            }
+        });
+
+        function renderMergedResult(merged) {
+            let container = document.getElementById('mergedResultContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'mergedResultContainer';
+                container.style.marginTop = '16px';
+                container.style.padding = '16px';
+                container.style.background = 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%)';
+                container.style.borderRadius = '12px';
+                container.style.border = '2px solid #a5d6a7';
+                actionBar.parentNode.insertBefore(container, outputList);
+            }
+            container.innerHTML = `
+                <div style="font-weight:700;color:#2e7d32;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:20px;">🎁</span> 你的专属精彩集锦已生成！
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div style="font-size:13px;color:#558b2f;">
+                        共 ${merged.segment_count} 段 · 总时长 ${merged.duration_str} · 大小 ${formatSize(merged.size)}
+                    </div>
+                    <a href="${merged.url}" download="${merged.merged_file}"
+                       style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:linear-gradient(135deg,#11998e,#38ef7d);color:white;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;"
+                       onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='',150)">
+                        📥 下载完整集锦
+                    </a>
+                </div>
+            `;
+            if (typeof window.parseEmojiIfAble === 'function') window.parseEmojiIfAble(container);
+        }
+
         downloadSelectedBtn.addEventListener('click', () => {
-            const toDownload = currentOutputFiles.filter(f => selectedUrls.has(f.url));
+            const toDownload = filteredOutputFiles.filter(f => selectedUrls.has(f.url));
             if (toDownload.length === 0) {
                 showWarnToast('先圈粉（勾选）几段，不然一键抱不走呀～');
                 return;
@@ -2775,6 +3368,20 @@
                 .replace(/'/g, '&#39;');
         }
 
+        function truncateFilename(name, maxLen) {
+            maxLen = maxLen || 28;
+            if (!name) return '无名录像';
+            const str = String(name);
+            if (str.length <= maxLen) return str;
+            const dotIdx = str.lastIndexOf('.');
+            if (dotIdx > 0 && dotIdx > str.length - 8) {
+                const ext = str.substring(dotIdx);
+                const base = str.substring(0, dotIdx);
+                return base.substring(0, maxLen - ext.length - 1) + '…' + ext;
+            }
+            return str.substring(0, maxLen - 1) + '…';
+        }
+
         function renderHistoryTaskFilter(names, selectedValue) {
             const opts = ['<option value="">全场次（无差别档案室）</option>']
                 .concat(names.map(n => {
@@ -2787,7 +3394,7 @@
         }
 
         function taskInitial(task) {
-            const name = task.task_name || task.user_name || '神';
+            const name = task.task_name || task.user_name || task.wechat_name || '神';
             const first = Array.from(String(name).trim()).find(c => c && !/\s/.test(c)) || '神';
             if (/[\u4e00-\u9fa5A-Za-z0-9]/.test(first)) return first.toUpperCase();
             return '🏸';
@@ -2811,16 +3418,24 @@
             historyList.innerHTML = tasks.map((task, idx) => {
                 const id = 'dy-' + (task.upload_id || String(idx)) + '-' + Math.random().toString(36).slice(2, 7);
                 const quote = pickCommentQuote(task);
-                const createdAt = formatDate(task.created_at);
-                const name = escapeHtml(task.task_name || task.user_name || '神秘打球人');
-                const original = escapeHtml(task.original_filename || task.safe_filename || '无名录像');
+                const createdAt = task.created_at_str || formatDate(task.created_at);
+                const name = escapeHtml(task.task_name || task.user_name || task.wechat_name || '神秘打球人');
+                const original = escapeHtml(truncateFilename(task.original_filename || task.safe_filename || '无名录像'));
                 const upload = escapeHtml(task.upload_url || '');
                 const files = task.output_files || [];
                 const totalDur = files.reduce((s, f) => s + (f.duration || 0), 0);
                 const totalSize = files.reduce((s, f) => s + (f.size || 0), 0);
                 const status = task.status || 'pending';
-                const statusChip = `<span class="chip ${escapeHtml(status)}">${escapeHtml(status)}</span>`;
-                const uploadBtn = upload
+                const isDel = !!task.is_deleted;
+                const isPrivate = !!task.is_private;
+                const canDelete = !isDel && (task.is_owner || task.is_admin);
+                const canRestore = isDel && task.is_admin;
+                const deletedBadge = isDel ? '<span class="deleted-badge">已删除</span>' : '';
+                const privateBadge = isPrivate ? '<span class="chip" style="background:#6b5dd3;color:#fff;font-size:11px;">🔒 仅自己可见</span>' : '';
+                const statusChip = isDel
+                    ? '<span class="chip" style="background:#999;color:#fff;">已隐藏</span>'
+                    : `<span class="chip ${escapeHtml(status)}">${escapeHtml(status)}</span>`;
+                const uploadBtn = (!isDel && upload)
                     ? `<a class="link-btn secondary" href="${upload}" target="_blank" rel="noopener">📄 看原录像</a>`
                     : '';
                 const previews = (files.length > 4 ? files.slice(0, 4) : files).map(f => `
@@ -2838,20 +3453,26 @@
                         </div>
                     </div>
                 ` : '';
-                const quickDownloadHtml = files.length > 0 ? `
+                const quickDownloadHtml = (!isDel && files.length > 0) ? `
                     <a class="link-btn" href="#" onclick="window._dyDownloadAll(${JSON.stringify(files.map(f => ({url: f.url, name: f.name}))).replace(/"/g, '&quot;')});return false;">📥 一健全下这 ${files.length} 段</a>
                 ` : '';
-                const loadBtnHtml = files.length > 0 ? `
+                const loadBtnHtml = (!isDel && files.length > 0) ? `
                     <button type="button" class="link-btn secondary" onclick="window.loadHistoryTask('${escapeHtml(task.upload_id)}')">🎯 载入到上方结果区</button>
                 ` : '';
+                const deleteBtnHtml = canDelete ? `
+                    <button type="button" class="link-btn dy-delete-btn" onclick="window.deleteHistoryTask('${escapeHtml(task.upload_id)}')">🗑️ 删除</button>
+                ` : '';
+                const restoreBtnHtml = canRestore ? `
+                    <button type="button" class="link-btn dy-restore-btn" onclick="window.restoreHistoryTask('${escapeHtml(task.upload_id)}')">♻️ 恢复</button>
+                ` : '';
                 return `
-                    <div class="dy-comment-item" data-upload-id="${escapeHtml(task.upload_id)}">
+                    <div class="dy-comment-item${isDel ? ' is-deleted' : ''}" data-upload-id="${escapeHtml(task.upload_id)}">
                         <div class="dy-avatar" title="这是 ${name} 的名场面哦～">${taskInitial(task)}</div>
                         <div class="dy-body">
                             <div class="dy-top-row">
                                 <div class="dy-user-wrap">
-                                    <span class="dy-user-name">${name}</span>
-                                    <span class="dy-user-title">往届名场面 #${idx + 1}</span>
+                                    <span class="dy-user-name">${name}${deletedBadge} ${privateBadge}</span>
+                                    <span class="dy-user-title">往届名场面 #${idx + 1}${task.is_admin ? ' 👑 管理员视角' : ''}</span>
                                 </div>
                                 <span class="dy-time">${createdAt}</span>
                             </div>
@@ -2864,16 +3485,18 @@
                                 ${totalSize ? `<span>💾 总大小 ${formatHumanSize(totalSize)}</span>` : ''}
                                 <span>🙋 归属：${name}</span>
                             </div>
-                            ${files.length > 0 ? `
+                            ${!isDel && files.length > 0 ? `
                                 <div class="dy-files-row">
                                     ${previews}
                                 </div>
                                 ${expandBtnHtml}
-                            ` : `<div class="dy-meta-row"><span style="color:#9b8fcc;">（这一次还没产出片段哦，可能球还在热身🌝）</span></div>`}
+                            ` : (isDel ? '<div class="dy-meta-row"><span style="color:#999;">（此任务已被隐藏，普通用户不可见）</span></div>' : '<div class="dy-meta-row"><span style="color:#9b8fcc;">（这一次还没产出片段哦，可能球还在热身🌝）</span></div>')}
                             <div class="dy-actions-row">
                                 ${uploadBtn}
                                 ${quickDownloadHtml}
                                 ${loadBtnHtml}
+                                ${deleteBtnHtml}
+                                ${restoreBtnHtml}
                             </div>
                         </div>
                     </div>
@@ -2927,7 +3550,11 @@
             currentHistoryFilter = historyTaskNameFilter.value;
             renderHistoryTaskFilter(lastHistoryPayload.task_names, currentHistoryFilter);
             const tasks = currentHistoryFilter
-                ? (lastHistoryPayload.tasks || []).filter(t => t.task_name === currentHistoryFilter)
+                ? (lastHistoryPayload.tasks || []).filter(t =>
+                    t.task_name === currentHistoryFilter ||
+                    t.user_name === currentHistoryFilter ||
+                    t.wechat_name === currentHistoryFilter
+                )
                 : (lastHistoryPayload.tasks || []);
             renderCommentFeed(tasks);
             if (!currentHistoryFilter) {
@@ -2950,7 +3577,8 @@
             const files = task.output_files || [];
             if (files.length > 0) {
                 currentOutputFiles = files;
-                filteredOutputFiles = [...files];
+                originalOutputOrder = [...files];
+                applySortAndFilter();
                 selectedUrls.clear();
                 const totalSize = files.reduce((sum, f) => sum + (f.size || 0), 0);
                 renderStats({
@@ -2960,12 +3588,57 @@
                 renderOutputs();
                 resultCard.style.display = 'block';
                 filterBar.style.display = 'flex';
+                sortBar.style.display = 'flex';
                 actionBar.style.display = 'flex';
                 try { window.scrollTo({ top: document.getElementById('resultCard').offsetTop - 20, behavior: 'smooth' }); } catch (e) {}
                 showSuccessToast(`档案室取件成功！载入 ${files.length} 段前世今生（前世精华🎬）`);
             } else {
                 showWarnToast('这局暂时还没产出片段，先去打一拍再来～');
             }
+        };
+
+        window.deleteHistoryTask = function(uploadId) {
+            if (!uploadId) return;
+            const ok = window.confirm('确定要把这局名场面藏起来吗？\n（只是软删除，自己看不到了，管理员还能恢复哦 🏸）');
+            if (!ok) return;
+            fetch(safeApiUrl(`/api/task/${encodeURIComponent(uploadId)}/delete`), {
+                method: 'POST',
+                headers: { ...getWechatHeader(), 'Content-Type': 'application/json' },
+                ...FETCH_OPTIONS_BASE,
+            })
+                .then(response => parseJsonOrFriendly(response))
+                .then(data => {
+                    if (data && data.ok) {
+                        showToast('🗑️ 已藏好，名场面移入档案室回收站');
+                        loadHistory();
+                    } else {
+                        showErrorToast((data && data.error) || '删除失败');
+                    }
+                })
+                .catch(err => {
+                    showErrorToast('删除失败：' + (err && err.message ? err.message : '网络异常'));
+                });
+        };
+
+        window.restoreHistoryTask = function(uploadId) {
+            if (!uploadId) return;
+            fetch(safeApiUrl(`/api/task/${encodeURIComponent(uploadId)}/restore`), {
+                method: 'POST',
+                headers: { ...getWechatHeader(), 'Content-Type': 'application/json' },
+                ...FETCH_OPTIONS_BASE,
+            })
+                .then(response => parseJsonOrFriendly(response))
+                .then(data => {
+                    if (data && data.ok) {
+                        showToast('♻️ 已恢复，名场面重新可见');
+                        loadHistory();
+                    } else {
+                        showErrorToast((data && data.error) || '恢复失败');
+                    }
+                })
+                .catch(err => {
+                    showErrorToast('恢复失败：' + (err && err.message ? err.message : '网络异常'));
+                });
         };
 
         minDurationInput && minDurationInput.addEventListener('input', () => {
@@ -2992,17 +3665,40 @@
             return missing.length === 0;
         }
 
-        function bootstrapPage() {
+        async function bootstrapPage() {
             checkCriticalDoms();
-            let saved = null;
-            try { saved = localStorage.getItem(WECHAT_NAME_STORAGE_KEY); } catch (e) {}
-            if (saved) {
-                saveWechatName(saved);
+            let savedName = null;
+            let savedToken = null;
+            try { savedName = localStorage.getItem(WECHAT_NAME_STORAGE_KEY); } catch (e) {}
+            try { savedToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY); } catch (e) {}
+
+            if (savedToken) {
+                authToken = savedToken;
+                try {
+                    const resp = await fetch(safeApiUrl('/api/auth/me'), {
+                        ...FETCH_OPTIONS_BASE,
+                        method: 'GET',
+                        headers: getAuthHeader()
+                    });
+                    const data = await resp.json();
+                    if (data && data.user) {
+                        wechatName = data.user.wechat_name;
+                        isAdmin = !!data.user.is_admin;
+                        renderIdentity();
+                    } else {
+                        clearAuth();
+                    }
+                } catch (e) {
+                    clearAuth();
+                }
+            } else if (savedName) {
+                clearAuth();
             }
+
             loadRuntimeConfig().then(() => {
                 loadHistory();
                 loadComments();
-                if (!saved) {
+                if (!wechatName) {
                     setTimeout(() => {
                         if (!wechatName) openIdentityModal(false);
                     }, 400);
@@ -3015,6 +3711,22 @@
             if (typeof window.parseEmojiIfAble === 'function') {
                 try { window.parseEmojiIfAble(document.body); } catch (e) { console.warn('[badminton] parseEmojiIfAble failed:', e); }
             }
+        }
+
+        async function authedFetch(url, options = {}) {
+            options.headers = { ...(options.headers || {}), ...getAuthHeader() };
+            const resp = await fetch(url, options);
+            if (resp.status === 401) {
+                try {
+                    const data = await resp.clone().json();
+                    if (data && data.need_login) {
+                        clearAuth();
+                        openIdentityModal(false);
+                        showWarnToast('请先登录后再操作哦 🔐');
+                    }
+                } catch (e) {}
+            }
+            return resp;
         }
 
         bootstrapPage();
