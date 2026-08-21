@@ -2073,6 +2073,13 @@
             return headers;
         }
 
+        function withAuthToken(url) {
+            if (!authToken || !url) return url;
+            if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+            const sep = url.includes('?') ? '&' : '?';
+            return url + sep + 'token=' + encodeURIComponent(authToken);
+        }
+
         function getWechatHeader() {
             return getAuthHeader();
         }
@@ -2212,6 +2219,21 @@
                 const value = (identityInput && identityInput.value || '').trim();
                 if (!value) {
                     showWarnToast('先填个名字再走嘛～');
+                    identityInput && identityInput.focus();
+                    return;
+                }
+                if (value.length < 2) {
+                    showWarnToast('微信名至少2个字符哦');
+                    identityInput && identityInput.focus();
+                    return;
+                }
+                if (value.length > 20) {
+                    showWarnToast('微信名最长20个字符哦');
+                    identityInput && identityInput.focus();
+                    return;
+                }
+                if (!/^[\u4e00-\u9fa5a-zA-Z0-9_\-]+$/.test(value)) {
+                    showWarnToast('微信名只能包含中文、英文、数字、下划线和连字符');
                     identityInput && identityInput.focus();
                     return;
                 }
@@ -2854,7 +2876,7 @@
                     progressContainer.style.display = 'none';
                     videoPreview.style.display = 'block';
 
-                    previewVideo.src = currentUpload.url;
+                    previewVideo.src = withAuthToken(currentUpload.url);
                     const infoParts = [
                         `🎬 录像: ${escapeHtml(truncateFilename(currentUpload.filename))}`,
                         `💾 球包大小: ${formatSize(currentUpload.size)}`,
@@ -3189,21 +3211,23 @@
             }
 
             outputList.innerHTML = files.map((file, idx) => {
+                const fileUrl = withAuthToken(file.url);
+                const thumbUrl = file.thumbnail_url ? withAuthToken(file.thumbnail_url) : '';
                 const checked = selectedUrls.has(file.url) ? 'checked' : '';
                 const stars = file.excitement_stars || 3;
                 const starHtml = '⭐'.repeat(stars) + '<span style="color:#ddd;">☆</span>'.repeat(5 - stars);
-                const thumbHtml = file.thumbnail_url
-                    ? `<div class="output-thumb"><img src="${file.thumbnail_url}" alt="封面" loading="lazy"></div>`
+                const thumbHtml = thumbUrl
+                    ? `<div class="output-thumb"><img src="${thumbUrl}" alt="封面" loading="lazy"></div>`
                     : `<div class="output-thumb">🎬</div>`;
                 return `
                     <div class="output-item">
-                        <input type="checkbox" class="item-checkbox" data-url="${file.url}" data-name="${file.name}" ${checked}>
+                        <input type="checkbox" class="item-checkbox" data-url="${escapeHtml(file.url)}" data-name="${escapeHtml(file.name)}" ${checked}>
                         ${thumbHtml}
                         <div class="output-info">
-                            <div class="output-name">第${idx+1}名 · ${file.name}</div>
+                            <div class="output-name">第${idx+1}名 · ${escapeHtml(file.name)}</div>
                             <div class="output-meta">
                                 <span class="output-meta-item duration">
-                                    ⏱️ ${file.duration_str || formatDurationSec(file.duration)}
+                                    ⏱️ ${escapeHtml(file.duration_str || formatDurationSec(file.duration))}
                                 </span>
                                 <span class="output-meta-item">
                                     💾 ${formatSize(file.size)}
@@ -3211,7 +3235,7 @@
                                 <span class="excitement-stars">${starHtml}</span>
                             </div>
                         </div>
-                        <a href="${file.url}" download="${file.name}" class="download-btn" title="单独下载这一段">
+                        <a href="${fileUrl}" download="${escapeHtml(file.name)}" class="download-btn" title="单独下载这一段">
                             ⬇️
                         </a>
                     </div>
@@ -3498,10 +3522,10 @@
                     ? '<span class="chip" style="background:#999;color:#fff;">已隐藏</span>'
                     : `<span class="chip ${escapeHtml(status)}">${escapeHtml(status)}</span>`;
                 const uploadBtn = (!isDel && upload)
-                    ? `<a class="link-btn secondary" href="${upload}" target="_blank" rel="noopener">📄 看原录像</a>`
+                    ? `<a class="link-btn secondary" href="${withAuthToken(upload)}" target="_blank" rel="noopener">📄 看原录像</a>`
                     : '';
                 const previews = (files.length > 4 ? files.slice(0, 4) : files).map(f => `
-                    <a class="link-btn" href="${escapeHtml(f.url)}" download="${escapeHtml(f.name)}" title="${escapeHtml(f.name)}">🎬 ${escapeHtml(f.duration_str || '')}</a>
+                    <a class="link-btn" href="${withAuthToken(f.url)}" download="${escapeHtml(f.name)}" title="${escapeHtml(f.name)}">🎬 ${escapeHtml(f.duration_str || '')}</a>
                 `).join('');
                 const expandBtnHtml = files.length > 4 ? `
                     <div class="dy-expand">
@@ -3509,7 +3533,7 @@
                         <div class="dy-expand-content" id="${id}-more">
                             <div style="display:flex;flex-wrap:wrap;gap:6px;">
                                 ${files.slice(4).map(f => `
-                                    <a class="link-btn" href="${escapeHtml(f.url)}" download="${escapeHtml(f.name)}" title="${escapeHtml(f.name)}">🎬 ${escapeHtml(f.duration_str || '')}</a>
+                                    <a class="link-btn" href="${withAuthToken(f.url)}" download="${escapeHtml(f.name)}" title="${escapeHtml(f.name)}">🎬 ${escapeHtml(f.duration_str || '')}</a>
                                 `).join('')}
                             </div>
                         </div>
@@ -3577,7 +3601,7 @@
             arr.forEach((f, i) => {
                 setTimeout(() => {
                     const a = document.createElement('a');
-                    a.href = f.url;
+                    a.href = withAuthToken(f.url);
                     a.download = f.name;
                     document.body.appendChild(a);
                     a.click();

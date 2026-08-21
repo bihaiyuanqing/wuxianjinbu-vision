@@ -16,8 +16,12 @@ ADMIN_DEFAULT_PASSWORD = 'XingYuShu@2026'
 
 @contextmanager
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
     conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA busy_timeout=10000')
+    conn.execute('PRAGMA synchronous=NORMAL')
+    conn.execute('PRAGMA foreign_keys=ON')
     try:
         yield conn
         conn.commit()
@@ -81,6 +85,8 @@ def init_db():
             )
             """
         )
+        _ensure_column(conn, 'comments', 'is_deleted', 'INTEGER DEFAULT 0')
+        _ensure_column(conn, 'comments', 'deleted_at', 'TEXT')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_comments_created ON comments(created_at DESC)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_comments_wechat_name ON comments(wechat_name)')
 
@@ -119,6 +125,10 @@ def init_db():
         )
 
         _ensure_admin_exists(conn)
+
+        conn.execute(
+            "UPDATE tasks SET status='failed', error='服务重启，任务被中断' WHERE status IN ('processing', 'queued') AND (completed_at IS NULL)"
+        )
 
 
 def _ensure_admin_exists(conn):
@@ -404,16 +414,74 @@ def add_comment(wechat_name, rating, content):
     return dict(row) if row else None
 
 
-def list_comments(wechat_name=None):
+def list_comments(wechat_name=None, include_deleted=False):
     sql = 'SELECT * FROM comments'
     params = []
+    where = []
+    if not include_deleted:
+        where.append('(is_deleted IS NULL OR is_deleted = 0)')
     if wechat_name:
-        sql += ' WHERE wechat_name = ?'
+        where.append('wechat_name = ?')
         params.append(wechat_name)
+    if where:
+        sql += ' WHERE ' + ' AND '.join(where)
     sql += ' ORDER BY created_at DESC LIMIT 500'
     with get_conn() as conn:
         rows = conn.execute(sql, params).fetchall()
     return [dict(r) for r in rows]
+
+
+def soft_delete_comment(comment_id):
+    now = datetime.utcnow().isoformat() + 'Z'
+    with get_conn() as conn:
+        conn.execute(
+            'UPDATE comments SET is_deleted=1, deleted_at=? WHERE id=?',
+            (now, comment_id),
+        )
+
+
+def restore_comment(comment_id):
+    with get_conn() as conn:
+        conn.execute(
+            'UPDATE comments SET is_deleted=0, deleted_at=NULL WHERE id=?',
+            (comment_id,),
+        )
+
+
+def get_comment(comment_id):
+    with get_conn() as conn:
+        row = conn.execute('SELECT * FROM comments WHERE id = ?', (comment_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def reset_user_password(wechat_name, new_password):
+    if not wechat_name or not new_password:
+        return False
+    with get_conn() as conn:
+        row = conn.execute('SELECT id FROM users WHERE wechat_name = ?', (wechat_name,)).fetchone()
+        if not row:
+            return False
+        conn.execute(
+            'UPDATE users SET password_hash = ? WHERE wechat_name = ?',
+            (generate_password_hash(new_password), wechat_name),
+        )
+    return True
+
+
+def list_users():
+    with get_conn() as conn:
+        rows = conn.execute(
+            'SELECT wechat_name, is_admin, created_at FROM users ORDER BY created_at DESC LIMIT 500'
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def set_user_admin(wechat_name, is_admin):
+    with get_conn() as conn:
+        conn.execute(
+            'UPDATE users SET is_admin = ? WHERE wechat_name = ?',
+            (1 if is_admin else 0, wechat_name),
+        )
 
 
 def expire_old_tasks(days=7):

@@ -64,12 +64,17 @@ from web.models import (
     restore_task,
     add_comment,
     list_comments,
+    soft_delete_comment,
+    restore_comment,
+    get_comment,
     user_exists,
     create_user,
     verify_user,
     create_token,
     get_user_by_token,
     revoke_token,
+    reset_user_password,
+    list_users,
     is_admin as is_admin_user,
     can_view_task,
 )
@@ -161,7 +166,7 @@ def get_video_duration(filepath):
             'ffprobe', '-v', 'quiet', '-print_format', 'json',
             '-show_format', filepath
         ]
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=10)
         info = json.loads(result.stdout)
         return float(info['format']['duration'])
     except Exception as e:
@@ -322,12 +327,29 @@ def estimate_process_plan(source_duration_seconds, width=None, height=None,
     }
 
 
+def _validate_wechat_name(name):
+    if not name:
+        return '请输入微信名'
+    name = name.strip()
+    if not name:
+        return '微信名不能为空'
+    if len(name) < 2:
+        return '微信名至少2个字符哦'
+    if len(name) > 20:
+        return '微信名最长20个字符哦'
+    import re
+    if not re.match(r'^[\u4e00-\u9fa5a-zA-Z0-9_\-]+$', name):
+        return '微信名只能包含中文、英文、数字、下划线和连字符'
+    return None
+
+
 @app.route('/api/auth/check', methods=['POST'])
 def auth_check():
     data = request.get_json(silent=True) or {}
     wechat_name = (data.get('wechat_name') or '').strip()
-    if not wechat_name:
-        return jsonify({'error': '请输入微信名'}), 400
+    err = _validate_wechat_name(wechat_name)
+    if err:
+        return jsonify({'error': err}), 400
     exists = user_exists(wechat_name)
     return jsonify({'exists': exists, 'wechat_name': wechat_name}), 200
 
@@ -337,10 +359,13 @@ def auth_register():
     data = request.get_json(silent=True) or {}
     wechat_name = (data.get('wechat_name') or '').strip()
     password = data.get('password') or ''
-    if not wechat_name:
-        return jsonify({'error': '请输入微信名'}), 400
+    err = _validate_wechat_name(wechat_name)
+    if err:
+        return jsonify({'error': err}), 400
     if len(password) < 4:
         return jsonify({'error': '密码至少4位哦'}), 400
+    if len(password) > 64:
+        return jsonify({'error': '密码太长啦，最多64位'}), 400
     if user_exists(wechat_name):
         return jsonify({'error': '这个名字已经有人用啦，请换一个或者直接登录'}), 400
     user = create_user(wechat_name, password)
@@ -364,6 +389,9 @@ def auth_login():
     password = data.get('password') or ''
     if not wechat_name or not password:
         return jsonify({'error': '请输入微信名和密码'}), 400
+    err = _validate_wechat_name(wechat_name)
+    if err:
+        return jsonify({'error': err}), 400
     user = verify_user(wechat_name, password)
     if not user:
         return jsonify({'error': '密码不对哦，再想想？'}), 401
@@ -784,6 +812,52 @@ def _serialize_task(t):
     }
 
 
+def _collect_output_files(upload_id, task_result=None):
+    output_dir_abs = os.path.join(app.config['OUTPUT_FOLDER'], upload_id)
+    cached = None
+    if task_result and isinstance(task_result.get('output_files'), list):
+        cached = task_result['output_files']
+    if cached and os.path.isdir(output_dir_abs):
+        valid = []
+        for cf in cached:
+            fname = cf.get('name')
+            if not fname:
+                continue
+            fpath = os.path.join(output_dir_abs, fname)
+            if not (os.path.isfile(fpath) and fname.endswith('.mp4')):
+                continue
+            valid.append({
+                'name': fname,
+                'url': f"/outputs/{upload_id}/{fname}",
+                'size': cf.get('size') if cf.get('size') else (os.path.getsize(fpath) if os.path.exists(fpath) else 0),
+                'duration': cf.get('duration'),
+                'duration_str': cf.get('duration_str') or format_duration(cf.get('duration')),
+                'thumbnail_url': cf.get('thumbnail_url'),
+                'excitement_score': cf.get('excitement_score'),
+                'excitement_stars': cf.get('excitement_stars'),
+            })
+        if valid:
+            return valid
+    output_files = []
+    if os.path.isdir(output_dir_abs):
+        for f in sorted(os.listdir(output_dir_abs)):
+            fpath = os.path.join(output_dir_abs, f)
+            if os.path.isfile(fpath) and f.endswith('.mp4'):
+                try:
+                    size = os.path.getsize(fpath)
+                except OSError:
+                    size = 0
+                duration = get_video_duration(fpath)
+                output_files.append({
+                    'name': f,
+                    'url': f"/outputs/{upload_id}/{f}",
+                    'size': size,
+                    'duration': duration,
+                    'duration_str': format_duration(duration),
+                })
+    return output_files
+
+
 @app.route('/api/task/<upload_id>/status', methods=['GET'])
 def task_status(upload_id):
     wechat_name = _require_wechat_name()
@@ -793,23 +867,17 @@ def task_status(upload_id):
     if task.get('wechat_name') and wechat_name and task['wechat_name'] != wechat_name:
         return jsonify({'error': '无权查看此任务'}), 403
 
-    output_dir_abs = os.path.join(app.config['OUTPUT_FOLDER'], upload_id)
-    output_files = []
-    if os.path.isdir(output_dir_abs):
-        for f in sorted(os.listdir(output_dir_abs)):
-            fpath = os.path.join(output_dir_abs, f)
-            if os.path.isfile(fpath) and f.endswith('.mp4'):
-                duration = get_video_duration(fpath)
-                output_files.append({
-                    'name': f,
-                    'url': f"/outputs/{upload_id}/{f}",
-                    'size': os.path.getsize(fpath),
-                    'duration': duration,
-                    'duration_str': format_duration(duration),
-                })
+    result = None
+    if task.get('result_data'):
+        try:
+            result = _json.loads(task['result_data'])
+        except Exception:
+            result = None
+    output_files = _collect_output_files(upload_id, task_result=result)
 
     resp = _serialize_task(task)
     resp['output_files'] = output_files
+    resp['output_count'] = len(output_files)
     return jsonify(resp), 200
 
 
@@ -934,13 +1002,34 @@ def restore_task_api(upload_id):
     return jsonify({'ok': True, 'message': '已恢复，名场面重新可见'})
 
 
+def _can_access_file_for_upload(upload_filename):
+    prefix = upload_filename.split('_', 1)[0] if '_' in upload_filename else None
+    if not prefix or len(prefix) < 8:
+        return False
+    task = get_task(prefix)
+    if not task:
+        return False
+    user = _get_current_user()
+    current_name = user['wechat_name'] if user else None
+    return can_view_task(task, current_name)
+
+
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
+    if not _can_access_file_for_upload(filename):
+        return jsonify({'error': '无权访问此文件'}), 403
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 @app.route('/outputs/<upload_id>/<filename>')
 def output_file(upload_id, filename):
+    task = get_task(upload_id)
+    if not task:
+        return jsonify({'error': '文件不存在'}), 404
+    user = _get_current_user()
+    current_name = user['wechat_name'] if user else None
+    if not can_view_task(task, current_name):
+        return jsonify({'error': '无权访问此文件'}), 403
     output_dir = os.path.join(app.config['OUTPUT_FOLDER'], upload_id)
     return send_from_directory(output_dir, filename)
 
@@ -1069,7 +1158,11 @@ def merge_segments(upload_id):
 @app.route('/api/comments', methods=['GET'])
 def get_comments():
     wechat_name = request.args.get('wechat_name') or None
-    rows = list_comments(wechat_name=wechat_name)
+    current_user = _get_current_user()
+    current_name = current_user['wechat_name'] if current_user else None
+    is_admin = bool(current_user and current_user.get('is_admin'))
+    include_deleted = is_admin and request.args.get('include_deleted') == '1'
+    rows = list_comments(wechat_name=wechat_name, include_deleted=include_deleted)
     items = []
     for row in rows:
         items.append({
@@ -1079,14 +1172,117 @@ def get_comments():
             'content': row['content'],
             'created_at': row['created_at'],
             'created_at_str': _format_comment_time(row['created_at']),
+            'is_deleted': bool(row.get('is_deleted') or 0),
         })
+    visible_items = [i for i in items if not i['is_deleted']]
     stats = {
-        'total': len(items),
-        'average_rating': (sum(i['rating'] for i in items) / len(items)) if items else 0,
+        'total': len(visible_items),
+        'average_rating': (sum(i['rating'] for i in visible_items) / len(visible_items)) if visible_items else 0,
     }
     return jsonify({
-        'comments': items,
+        'comments': items if is_admin else visible_items,
         'stats': stats,
+        'is_admin': is_admin,
+    })
+
+
+@app.route('/api/comments/<int:comment_id>', methods=['DELETE'])
+def delete_comment_api(comment_id):
+    wechat_name = _require_login()
+    if not wechat_name:
+        return jsonify({'error': '请先登录', 'need_login': True}), 401
+    comment = get_comment(comment_id)
+    if not comment:
+        return jsonify({'error': '评论不存在'}), 404
+    is_owner = comment.get('wechat_name') == wechat_name
+    is_admin = is_admin_user(wechat_name)
+    if not (is_owner or is_admin):
+        return jsonify({'error': '只能删除自己的评论哦'}), 403
+    soft_delete_comment(comment_id)
+    logger.info('comment deleted id=%s by=%s admin=%s', comment_id, wechat_name, is_admin)
+    return jsonify({'ok': True, 'message': '评论已删除'})
+
+
+@app.route('/api/comments/<int:comment_id>/restore', methods=['POST'])
+def restore_comment_api(comment_id):
+    wechat_name = _require_login()
+    if not wechat_name:
+        return jsonify({'error': '请先登录', 'need_login': True}), 401
+    if not is_admin_user(wechat_name):
+        return jsonify({'error': '只有管理员可以恢复评论'}), 403
+    comment = get_comment(comment_id)
+    if not comment:
+        return jsonify({'error': '评论不存在'}), 404
+    restore_comment(comment_id)
+    logger.info('comment restored id=%s by=%s', comment_id, wechat_name)
+    return jsonify({'ok': True, 'message': '评论已恢复'})
+
+
+@app.route('/api/admin/users', methods=['GET'])
+def admin_list_users():
+    wechat_name = _require_login()
+    if not wechat_name:
+        return jsonify({'error': '请先登录', 'need_login': True}), 401
+    if not is_admin_user(wechat_name):
+        return jsonify({'error': '仅管理员可访问'}), 403
+    users = list_users()
+    return jsonify({'users': users})
+
+
+@app.route('/api/admin/reset-password', methods=['POST'])
+def admin_reset_password():
+    wechat_name = _require_login()
+    if not wechat_name:
+        return jsonify({'error': '请先登录', 'need_login': True}), 401
+    if not is_admin_user(wechat_name):
+        return jsonify({'error': '仅管理员可操作'}), 403
+    data = request.get_json(silent=True) or {}
+    target_name = (data.get('wechat_name') or '').strip()
+    new_password = data.get('new_password') or ''
+    if not target_name:
+        return jsonify({'error': '请指定要重置密码的用户'}), 400
+    if len(new_password) < 4:
+        return jsonify({'error': '新密码至少4位哦'}), 400
+    if not user_exists(target_name):
+        return jsonify({'error': '用户不存在'}), 404
+    ok = reset_user_password(target_name, new_password)
+    if not ok:
+        return jsonify({'error': '重置失败'}), 500
+    logger.warning('admin %s reset password for %s', wechat_name, target_name)
+    return jsonify({'ok': True, 'message': f'已重置用户 {target_name} 的密码'})
+
+
+@app.route('/api/admin/cleanup', methods=['POST'])
+def admin_cleanup():
+    admin_name = _require_login()
+    if not admin_name:
+        return jsonify({'error': '请先登录', 'need_login': True}), 401
+    if not is_admin_user(admin_name):
+        return jsonify({'error': '仅管理员可操作'}), 403
+    data = request.get_json(silent=True) or {}
+    days = int(data.get('days', 30))
+    if days < 7:
+        days = 7
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat() + 'Z'
+    cleaned_tasks = 0
+    cleaned_files = 0
+    from web.models import expire_old_tasks, mark_task_expired
+    expired = expire_old_tasks(days=days)
+    for t in expired:
+        upload_id = t['upload_id']
+        try:
+            _hard_delete_task_files(upload_id)
+            cleaned_files += 1
+        except Exception as e:
+            logger.warning('cleanup files error for %s: %s', upload_id, e)
+        mark_task_expired(upload_id)
+        cleaned_tasks += 1
+    logger.warning('admin %s ran cleanup: %d tasks, %d file sets cleaned', admin_name, cleaned_tasks, cleaned_files)
+    return jsonify({
+        'ok': True,
+        'cleaned_tasks': cleaned_tasks,
+        'cleaned_file_sets': cleaned_files,
+        'message': f'清理了 {cleaned_tasks} 个超过 {days} 天的过期任务'
     })
 
 
