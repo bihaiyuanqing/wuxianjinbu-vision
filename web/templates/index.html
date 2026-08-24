@@ -1248,28 +1248,274 @@
             display: block;
         }
 
-        @media (max-width: 380px) {
+        /* ================= Mobile (<=480px) ================= */
+        @media (max-width: 480px) {
+            html { -webkit-text-size-adjust: 100%; }
+            body { -webkit-tap-highlight-color: transparent; }
             .container {
-                padding-left: 16px;
-                padding-right: 16px;
+                padding-left: 14px;
+                padding-right: 14px;
+                padding-top: calc(env(safe-area-inset-top) + 14px);
+                padding-bottom: 20px;
             }
 
-            .brand {
-                gap: 9px;
-                margin-top: 15px;
+            .header { margin-bottom: 18px; }
+            .header h1 { font-size: 21px; line-height: 1.3; margin-bottom: 6px; letter-spacing: -0.3px; }
+            .header p { font-size: 12.5px; line-height: 1.55; padding: 0 6px; }
+
+            #dailyAiQuote.daily-quote {
+                font-size: 13px !important;
+                line-height: 1.5 !important;
+                min-height: 28px !important;
+                padding: 4px 14px !important;
+                max-width: 100% !important;
+                margin: 10px auto 0 !important;
+                white-space: normal;
+                word-break: break-word;
+            }
+            #dailyAiQuote.daily-quote > span { font-size: 13px !important; }
+
+            .guide-link {
+                margin-top: 10px;
+                font-size: 12px;
+                padding: 7px 14px;
             }
 
-            .brand-mark {
-                width: 48px;
+            .card {
+                border-radius: 16px;
+                padding: 16px;
+                margin-bottom: 14px;
+                box-shadow: 0 6px 24px rgba(0,0,0,0.12);
             }
+            .section-title { font-size: 15px; margin-bottom: 12px; }
 
-            .brand-name {
-                font-size: 11px;
+            /* Upload zone */
+            .upload-zone {
+                padding: 26px 14px;
+                border-radius: 16px;
+                min-height: auto;
             }
+            .upload-icon { font-size: 40px; margin-bottom: 10px; }
+            .upload-text { font-size: 15px; margin-bottom: 6px; }
+            .upload-hint { font-size: 12px; line-height: 1.6; padding: 0 2px; }
+            .upload-hint br { display: none; }
+            .upload-tip { font-size: 11.5px; margin-top: 8px; }
 
-            .brand-slogan {
+            /* Progress */
+            .progress-card { padding: 14px; border-radius: 16px; }
+            .progress-info { gap: 4px; }
+            .progress-name { font-size: 13px; }
+            .progress-stage { font-size: 12px; }
+            .progress-detail { font-size: 11.5px; }
+
+            /* Result */
+            .result-actions { gap: 6px; margin-bottom: 10px; }
+            .result-actions .btn { padding: 9px 8px; font-size: 12.5px; border-radius: 10px; }
+
+            /* Sort/filter rows */
+            .sort-tabs { gap: 6px; margin-bottom: 10px; }
+            .sort-tab { padding: 5px 10px; font-size: 12px; }
+            .long-round-row { gap: 6px; margin-bottom: 10px; }
+            .long-round-row label { font-size: 12px; white-space: nowrap; }
+            .long-round-row input[type=number] { width: 60px; font-size: 13px; padding: 6px 8px; }
+            .long-round-row .btn { padding: 6px 10px; font-size: 12px; }
+
+            .selection-bar { padding: 8px 10px; font-size: 12px; border-radius: 10px; gap: 6px; }
+            .selection-bar .btn { padding: 5px 10px; font-size: 12px; }
+
+            /* Output items */
+            .output-item {
+                padding: 10px;
+                border-radius: 10px;
+                gap: 8px;
+            }
+            .output-thumb {
+                width: 60px !important;
+                height: 44px !important;
+                min-width: 60px;
+                border-radius: 6px;
                 font-size: 20px;
             }
+            .output-thumb img { border-radius: 6px; }
+            .output-info { min-width: 0; flex: 1; }
+            .output-name { font-size: 12.5px; line-height: 1.4; }
+            .output-meta { gap: 4px 8px; font-size: 11px; margin-top: 3px; flex-wrap: wrap; }
+            .output-meta-item.duration { font-size: 11px; }
+            .excitement-stars { font-size: 11px; }
+            .ai-caption-text { font-size: 12px !important; padding: 5px 8px !important; line-height: 1.5 !important; }
+            .ai-caption-btn { font-size: 11px !important; padding: 3px 8px !important; margin-top: 4px !important; }
+            .ai-caption-copy { font-size: 11px !important; padding: 3px 8px !important; }
+            .download-btn {
+                width: 34px; height: 34px; font-size: 16px;
+            }
+            .item-checkbox { width: 16px; height: 16px; }
+
+            /* History filter */
+            .history-filter { gap: 6px; flex-direction: column; align-items: stretch; }
+            .history-filter > label { font-size: 12.5px; white-space: nowrap; align-self: flex-start; }
+            .history-filter select { flex: 1; min-width: 0; font-size: 12.5px; padding: 8px 10px; width: 100%; }
+            .refresh-history-btn { padding: 8px 10px; font-size: 12px; }
+            .history-stats { font-size: 11.5px; padding: 6px 10px; flex-wrap: wrap; gap: 4px 10px; }
+
+            /* History item (dy-comment-item) */
+            .dy-comment-item {
+                padding: 12px 12px 10px;
+                border-radius: 14px;
+                gap: 10px;
+            }
+            .dy-avatar { width: 36px; height: 36px; font-size: 15px; flex-shrink: 0; }
+            .dy-username { font-size: 13.5px; }
+            .dy-time { font-size: 11px; }
+            .dy-status-chips { gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+            .dy-meta-row { gap: 4px 8px; font-size: 11px; margin-bottom: 6px; }
+            .dy-meta-row .chip { font-size: 10.5px; padding: 2px 7px; }
+            .dy-desc { font-size: 12px; line-height: 1.5; }
+            .dy-files-row { gap: 4px; margin: 4px 0 6px; }
+            .dy-file-tag { font-size: 10.5px; padding: 3px 7px; }
+            .dy-actions-row { gap: 6px; margin-top: 4px; }
+            .dy-actions-row .link-btn { font-size: 11.5px; padding: 5px 9px; border-radius: 8px; }
+            .dy-actions-row .link-btn.primary { padding: 5px 9px; font-size: 11.5px; }
+            .dy-expand-btn { font-size: 11px; padding: 3px 9px; }
+            .dy-expand-content { padding: 8px; border-radius: 10px; }
+
+            /* Comment wall */
+            .comments-stats { gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+            .comments-stats .stat-chip { font-size: 11.5px; padding: 5px 10px; }
+            .comment-rating { gap: 4px; margin-bottom: 8px; }
+            .star { font-size: 22px; }
+            .comment-input-row label { font-size: 12.5px; }
+            #commentContent {
+                font-size: 13px;
+                padding: 9px 10px;
+                min-height: 70px;
+                border-radius: 10px;
+            }
+            #commentCounter { font-size: 11px; right: 10px; bottom: 6px; }
+            /* Emoji bar: 6 cols */
+            .emoji-bar {
+                gap: 8px 4px;
+                justify-content: space-between;
+                margin: 6px 0 2px;
+            }
+            .emoji-cell {
+                flex: 0 0 calc((100% - 20px) / 6);
+                max-width: calc((100% - 20px) / 6);
+                gap: 2px;
+            }
+            .emoji-btn {
+                width: 30px;
+                height: 30px;
+                flex: 0 0 30px;
+                font-size: 15px !important;
+                border-width: 1.5px;
+            }
+            .emoji-label { font-size: 9.5px !important; }
+            /* AI comment buttons */
+            [data-ai-comment-mood],
+            .btn-xsmall { font-size: 11px !important; padding: 4px 8px !important; border-radius: 8px !important; }
+            #aiCommentLoading { font-size: 11px !important; }
+            .comment-submit-row { gap: 8px; margin-top: 10px; }
+            #submitCommentBtn { padding: 8px 14px; font-size: 13px; border-radius: 10px; }
+            /* Comment table */
+            .comment-list-header,
+            .comment-list-row { font-size: 11.5px; }
+            .comment-list-header > div,
+            .comment-list-row > div { padding: 6px 4px; }
+            .comment-list-header > div:first-child,
+            .comment-list-row > div:first-child { flex: 0 0 70px; max-width: 70px; }
+            .comment-content-cell { font-size: 11.5px; }
+            .comment-user-name { font-size: 11.5px; }
+
+            /* Modals */
+            .modal-mask { padding: 0 14px; align-items: flex-start; padding-top: calc(env(safe-area-inset-top) + 40px); }
+            .modal-dialog {
+                max-width: 100%;
+                width: 100%;
+                padding: 16px 16px 14px;
+                border-radius: 16px;
+                margin: 0;
+            }
+            .modal-dialog .modal-emoji { font-size: 28px; margin-bottom: 6px; }
+            .modal-title { font-size: 15px; }
+            .modal-desc { font-size: 12px; line-height: 1.6; margin-bottom: 10px; }
+            .modal-tip { font-size: 11.5px; padding: 6px 10px; margin-bottom: 10px; border-radius: 8px; }
+            .modal input[type="text"],
+            .modal input[type="password"] {
+                font-size: 14px;
+                padding: 10px 12px;
+                border-radius: 10px;
+            }
+            .modal-actions .btn,
+            .modal .btn-full,
+            .btn-row .btn {
+                padding: 10px 12px;
+                font-size: 14px;
+                border-radius: 10px;
+            }
+            .privacy-row { font-size: 12px; gap: 6px; margin-top: 6px; }
+            /* AI task names */
+            .input-row { gap: 8px; }
+            #taskNameInput { font-size: 13px; padding: 10px 12px; }
+            #aiTaskNamesBtn { font-size: 12px !important; min-width: 92px !important; padding: 0 10px !important; margin-left: 6px !important; height: 42px; }
+            #aiTaskNamesTips { gap: 6px !important; margin-top: 6px !important; }
+            .ai-name-chip { font-size: 11.5px !important; padding: 3px 9px !important; }
+
+            /* Identity bar */
+            .identity-bar {
+                padding: 8px 12px;
+                border-radius: 12px;
+                margin-bottom: 12px;
+                font-size: 12.5px;
+            }
+            .identity-name { font-size: 13px; }
+            .identity-actions { gap: 6px; }
+            .identity-actions .btn-xsmall { padding: 4px 10px; font-size: 11.5px; }
+
+            /* Preview modal */
+            .preview-modal .modal-dialog {
+                max-width: 100%;
+                width: 100%;
+                height: 100%;
+                border-radius: 0;
+                max-height: none;
+                padding: 12px;
+                padding-top: calc(env(safe-area-inset-top) + 12px);
+                padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+            }
+            .preview-video { border-radius: 10px; }
+            .preview-close { top: calc(env(safe-area-inset-top) + 14px); right: 14px; width: 32px; height: 32px; font-size: 16px; }
+            .preview-title { font-size: 13px; margin: 8px 0 4px; padding-right: 40px; }
+            .preview-desc { font-size: 11.5px; }
+            .preview-actions { gap: 6px; flex-wrap: wrap; }
+            .preview-actions .btn { padding: 7px 10px; font-size: 12px; }
+
+            /* Confirm modal */
+            .confirm-modal .modal-dialog { padding: 16px; border-radius: 16px; max-width: calc(100vw - 40px); }
+            .confirm-title { font-size: 15px; }
+            .confirm-msg { font-size: 13px; line-height: 1.6; }
+            .confirm-btns { gap: 8px; margin-top: 14px; }
+            .confirm-btns button { padding: 9px 12px; font-size: 13px; border-radius: 10px; }
+
+            /* Toast */
+            .toast-container { top: calc(env(safe-area-inset-top) + 12px); left: 12px; right: 12px; font-size: 13px; padding: 10px 14px; border-radius: 12px; }
+
+            /* Footer */
+            .footer { margin-top: 20px; padding: 16px 10px calc(16px + env(safe-area-inset-bottom)); border-radius: 16px 16px 0 0; }
+            .footer-logo img { height: 40px; }
+            .footer-slogan { font-size: 18px; letter-spacing: 2px; margin-top: 6px; }
+            .footer-meta { font-size: 11px; line-height: 1.7; padding: 0 6px; }
+            .footer-icp { font-size: 11px; }
+
+            /* Smaller screen extra tweaks */
+            .btn { min-height: 40px; }
+            .btn-small { min-height: 36px; }
+        }
+
+        @media (max-width: 360px) {
+            .header h1 { font-size: 19px; }
+            .dy-actions-row { gap: 4px; }
+            .dy-actions-row .link-btn { padding: 4px 7px; font-size: 11px; }
+            .emoji-cell { flex: 0 0 calc((100% - 16px) / 5); max-width: calc((100% - 16px) / 5); }
         }
 
         /* 抖音评论风历史任务卡片 */
