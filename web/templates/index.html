@@ -1568,7 +1568,7 @@
         <div class="header">
             <h1>🏸 无限进步球场 · 快乐切片工作站</h1>
             <p>上传就是热身，切割就是开席；每段快乐，都值得被单独保存。</p>
-            <p id="dailyAiQuote" class="daily-quote" style="margin-top:10px;font-size:14px;color:#7a6cf4;font-weight:600;min-height:22px;transition:all .3s;">
+            <p id="dailyAiQuote" class="daily-quote" style="margin:12px auto 0;max-width:600px;font-size:14px;color:#4a36b0;font-weight:700;min-height:32px;line-height:32px;padding:3px 18px;background:rgba(255,255,255,0.95);border-radius:999px;display:inline-block;box-shadow:0 2px 10px rgba(0,0,0,0.15);">
                 <span style="display:inline-block;animation:spin 1s linear infinite;">⏳</span> AI 正在为今天的打球运势占一卦…
             </p>
             <a class="guide-link" href="/guide">📖 《如何优雅地打出一盘名场面》</a>
@@ -2341,7 +2341,7 @@
                                 msg = d.quote;
                                 const qe = document.getElementById('dailyAiQuote');
                                 if (qe && d.quote) {
-                                    qe.innerHTML = `🏸 <span id="aiQuoteText"></span>${d.weekday ? ` <span style="color:#999;font-weight:400;margin-left:8px;font-size:12px;">· ${d.weekday}限定</span>` : ''}`;
+                                    qe.innerHTML = `🏸 <span id="aiQuoteText" style="color:#4a36b0;font-weight:700;"></span>${d.weekday ? ` <span style="color:#8a7fc0;font-weight:500;margin-left:6px;font-size:12px;">· ${d.weekday}限定</span>` : ''}`;
                                     const t = document.getElementById('aiQuoteText');
                                     if (t) t.textContent = d.quote;
                                 }
@@ -3396,12 +3396,12 @@
                         const resp = await fetch(safeApiUrl('/api/ai/daily-quote') + (params.toString() ? '?' + params.toString() : ''), FETCH_OPTIONS_BASE);
                         const d = await resp.json();
                         if (d && d.quote) {
-                            dailyQuoteEl.innerHTML = `🏸 <span id="aiQuoteText"></span>${d.weekday ? ` <span style="color:#999;font-weight:400;margin-left:8px;font-size:12px;">· ${d.weekday}限定</span>` : ''}`;
+                            dailyQuoteEl.innerHTML = `🏸 <span id="aiQuoteText" style="color:#4a36b0;font-weight:700;"></span>${d.weekday ? ` <span style="color:#8a7fc0;font-weight:500;margin-left:6px;font-size:12px;">· ${d.weekday}限定</span>` : ''}`;
                             const t = document.getElementById('aiQuoteText');
                             if (t) t.textContent = d.quote;
                         }
                     } catch (e) {
-                        dailyQuoteEl.textContent = '🏸 打一球有一球的欢喜，挥一拍有一拍的痛快';
+                        dailyQuoteEl.innerHTML = '🏸 <span style="color:#4a36b0;font-weight:700;">打一球有一球的欢喜，挥一拍有一拍的痛快</span>';
                     }
                 })();
             }
