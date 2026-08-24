@@ -3,6 +3,10 @@ import json
 import uuid
 import shutil
 import logging
+import time as _time
+import urllib.request
+import urllib.error
+import threading
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
@@ -21,6 +25,11 @@ PORT = int(os.getenv('PORT', '5000'))
 DEBUG = os.getenv('FLASK_DEBUG', 'false').lower() in ('1', 'true', 'yes')
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
+ARK_API_KEY = os.getenv('ARK_API_KEY', '')
+ARK_ENDPOINT = os.getenv('ARK_ENDPOINT', '')
+ARK_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3'
+ARK_TIMEOUT = int(os.getenv('ARK_TIMEOUT', '20'))
+
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -34,6 +43,9 @@ HARD_MAX_DURATION_SECONDS = 30 * 60
 BUDGET_SECONDS_FOR_PROCESS = 180
 BASE_DETECT_RATIO = 0.08
 BASE_CUT_RATIO = 0.22
+
+_llm_cache = {}
+_llm_cache_lock = threading.Lock()
 
 
 def _estimate_interval(estimate: float):
@@ -50,6 +62,7 @@ def _estimate_interval(estimate: float):
     if high <= best:
         high = best * 1.25
     return low, best, high
+
 
 from web.models import (
     init_db,
@@ -1323,6 +1336,212 @@ def create_comment():
             'created_at_str': _format_comment_time(comment['created_at']),
         }
     }), 200
+
+
+
+
+_LLM_FALLBACKS = {
+    'task_names': [
+        ['🏸 羽毛球快乐切片 #{idx}', '{name} · 今晚高光时刻 #{idx}', '「热血场」{name}的羽毛球日记'],
+        ['🎯 {name}的球王修炼册', '💥 绝杀时刻 · {name}专属', '🎈 快乐打球不加班'],
+    ],
+    'daily_quote': [
+        '打一球有一球的欢喜，挥一拍有一拍的痛快 🏸',
+        '今天的你，比昨天的自己更会打球了一点点 ✨',
+        '羽毛球不会辜负每一次挥拍 💪',
+        '输了下次赢回来，赢了今晚加鸡腿 🍗',
+        '球场见真情，杀球见真章 🎯',
+    ],
+    'comment': [
+        '这网站太好用了！今天的视频切完帅到我自己了 💪',
+        '无限进步真的不骗人！期待下次打球的自己 🏸',
+        '切片完反复看了3遍，这记杀球我能吹一年 🎉',
+        '谢谢无限进步球场！记录一下今天的美好 ✨',
+    ],
+    'caption': [
+        '第{seg_idx}段！{duration_s}秒热血杀球，这把我直接封神 🏸🔥 #羽毛球 #无限进步',
+        '「{duration_s}秒名场面」今天我打出了职业选手级别的手感 💯',
+        '随手录的一段，结果帅出天际 😎 #羽毛球日常',
+    ]
+}
+
+def _cached_get(key, ttl_seconds, producer):
+    with _llm_cache_lock:
+        entry = _llm_cache.get(key)
+        if entry and _time.time() - entry['ts'] < ttl_seconds:
+            return entry['val'], True
+    try:
+        val = producer()
+    except Exception as e:
+        logger.warning('LLM cache producer %s error: %s', key, e)
+        val = None
+    if val is not None:
+        with _llm_cache_lock:
+            _llm_cache[key] = {'ts': _time.time(), 'val': val}
+    return val, False
+
+def _call_doubao(prompt: str, system: str = '你是一位羽毛球爱好者，语言简短活泼带emoji，不超过50字。', max_tokens: int = 200, temperature: float = 0.9):
+    if not ARK_API_KEY or not ARK_ENDPOINT:
+        return None
+    payload = json.dumps({
+        'model': ARK_ENDPOINT,
+        'stream': False,
+        'messages': [
+            {'role': 'system', 'content': system},
+            {'role': 'user', 'content': prompt},
+        ],
+        'max_tokens': max_tokens,
+        'temperature': temperature,
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        f'{ARK_BASE_URL}/chat/completions',
+        data=payload,
+        method='POST',
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {ARK_API_KEY}',
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=ARK_TIMEOUT) as r:
+            data = json.loads(r.read().decode('utf-8'))
+        choices = data.get('choices') or []
+        if not choices:
+            return None
+        content = (choices[0].get('message') or {}).get('content') or ''
+        content = content.strip().replace('\n', '\n').strip('"').strip("'")
+        return content or None
+    except urllib.error.HTTPError as e:
+        logger.warning('Doubao HTTP %s: %s', e.code, e.read()[:200])
+        return None
+    except Exception as e:
+        logger.warning('Doubao error: %s', e)
+        return None
+
+def _try_parse_json_array(text: str):
+    if not text:
+        return None
+    try:
+        arr = json.loads(text)
+        if isinstance(arr, list):
+            return [str(x).strip() for x in arr if str(x).strip()]
+    except Exception:
+        pass
+    lines = [l.strip(' -•*1.2.3.4.5.6.7.8.9.0"\t') for l in text.replace('\n', '\n').split('\n')]
+    lines = [l.strip('「」『』""').strip() for l in lines if l.strip()]
+    if lines:
+        return lines[:5]
+    return None
+
+def _now_cn():
+    return datetime.utcnow() + timedelta(hours=8)
+
+def _weekday_cn():
+    names = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+    return names[_now_cn().weekday()]
+
+def _random_fallback(category, idx=0):
+    import random
+    arr = _LLM_FALLBACKS.get(category) or []
+    if not arr:
+        return ''
+    pool = arr[idx % len(arr)] if isinstance(arr[0], list) else arr
+    return random.choice(pool)
+
+# ===== LLM APIs =====
+
+@app.route('/api/ai/daily-quote', methods=['GET'])
+def ai_daily_quote():
+    weekday = _weekday_cn()
+    now = _now_cn()
+    date_key = now.strftime('%Y%m%d') + weekday
+    user_name = request.args.get('name') or ''
+
+    def producer():
+        prompt = f'今天是{weekday}，请输出一句20字以内的羽毛球相关鼓励语或鸡汤，带emoji。只输出一句话。'
+        if user_name:
+            prompt = f'用户"{user_name}"刚登录成功。今天是{weekday}，请输出一句带名字、20字以内的个性化欢迎语，羽毛球主题，带emoji。只输出一句话。'
+        return _call_doubao(prompt, max_tokens=60, temperature=0.95)
+
+    quote, cached = _cached_get(f'quote_{date_key}_{user_name or "guest"}', 5 * 60, producer)
+    if not quote:
+        import random
+        base = random.choice(_LLM_FALLBACKS['daily_quote'])
+        if user_name:
+            base = f'{user_name}，{base}'
+        quote = base
+    return jsonify({'quote': quote, 'weekday': weekday, 'from_cache': cached})
+
+@app.route('/api/ai/task-names', methods=['POST'])
+def ai_task_names():
+    data = request.get_json(silent=True) or {}
+    user_name = (data.get('user_name') or '').strip() or '球友'
+    date_hint = (data.get('date_hint') or '').strip() or _now_cn().strftime('%m月%d日')
+    style = (data.get('style') or '').strip().lower() or 'mixed'
+
+    def producer():
+        sys = '你是一位羽毛球爱好者的起名助手，输出JSON数组。'
+        prompt = f'为用户"{user_name}"在{date_hint}的羽毛球训练/比赛录像起3个好玩有个性的标题，风格可以热血、搞笑、古风、装逼各一种。请直接输出JSON字符串数组，例如["标题1","标题2","标题3"]，不要加任何解释文字。长度不超过20字每个。'
+        raw = _call_doubao(prompt, system=sys, max_tokens=200, temperature=0.95)
+        arr = _try_parse_json_array(raw) if raw else None
+        return arr
+
+    names, _ = _cached_get(f'names_{user_name}_{date_hint}_{style}', 60, producer)
+    if not names or len(names) < 3:
+        import random
+        templates = [
+            f'🏸 {date_hint} · {user_name}的快乐切片',
+            f'🎯 {user_name} · 今晚高光时刻',
+            f'💥 「热血场」{date_hint}球王修炼记',
+        ]
+        names = templates
+    return jsonify({'names': names[:5]})
+
+@app.route('/api/ai/comment', methods=['POST'])
+def ai_comment():
+    data = request.get_json(silent=True) or {}
+    mood = (data.get('mood') or 'funny').strip().lower()
+    rating = int(data.get('rating') or 5)
+    user_name = (data.get('user_name') or '').strip()
+
+    mood_map = {
+        'funny': ('搞笑沙雕', '哈哈哈哈今天'),
+        'serious': ('认真建议', '今天我觉得'),
+        'lazy': ('划水敷衍', '嘿嘿随便写两句'),
+        'encourage': ('鼓励打气', '无限进步冲鸭'),
+    }
+    mood_label, opener = mood_map.get(mood, ('有趣', '今天'))
+
+    def producer():
+        sys = '你是羽毛球网站的留言墙用户，语气像真实的球友聊天，25字内。'
+        prompt = f'以一位羽毛球友的身份，用「{mood_label}」的风格，写一句25字以内的留言，给网站打{rating}⭐。开头可以带"{opener}"。只输出一句话。'
+        raw = _call_doubao(prompt, system=sys, max_tokens=80, temperature=0.95)
+        return raw.strip() if raw else None
+
+    text, _ = _cached_get(f'comment_{mood}_{rating}_{user_name}', 120, producer)
+    if not text:
+        text = _random_fallback('comment')
+    return jsonify({'content': text, 'rating': rating})
+
+@app.route('/api/ai/caption', methods=['POST'])
+def ai_caption():
+    data = request.get_json(silent=True) or {}
+    seg_idx = int(data.get('seg_idx') or 1)
+    duration_s = int(data.get('duration_s') or 0)
+    score = float(data.get('score') or 0.5)
+    total_segs = int(data.get('total_segs') or 1)
+    user_name = (data.get('user_name') or '').strip() or '我'
+
+    def producer():
+        sys = '你是一名羽毛球短视频博主，输出一段50字以内的抖音/朋友圈文案。'
+        prompt = f'这段是{user_name}的羽毛球切片，第{seg_idx}/{total_segs}段，时长{duration_s}秒，兴奋度分数{int(score*100)}分（满分100）。请写一段50字以内的朋友圈文案，带合适的emoji和2-3个相关hashtag。'
+        raw = _call_doubao(prompt, system=sys, max_tokens=120, temperature=0.9)
+        return raw.strip() if raw else None
+
+    text, _ = _cached_get(f'cap_{seg_idx}_{duration_s}_{int(score*100)}_{user_name}', 300, producer)
+    if not text:
+        text = f'第{seg_idx}段！{duration_s}秒热血杀球，这把我直接封神 🏸🔥 #羽毛球 #无限进步'
+    return jsonify({'caption': text})
 
 
 if __name__ == '__main__':

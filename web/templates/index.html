@@ -215,6 +215,41 @@
             border-radius: 10px;
         }
 
+        .btn-xsmall {
+            padding: 4px 10px;
+            font-size: 12px;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+
+        .ai-name-chip {
+            padding: 4px 10px;
+            background: #faf7ff;
+            border: 1px solid #e4defb;
+            color: #5c4cd8;
+            border-radius: 999px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all .15s ease;
+            white-space: nowrap;
+        }
+        .ai-name-chip:hover {
+            background: #5c4cd8;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+        .ai-name-chip:active {
+            transform: translateY(0);
+        }
+
+        .daily-quote {
+            animation: fadeInUp .5s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .btn-full {
             width: 100%;
         }
@@ -1533,6 +1568,9 @@
         <div class="header">
             <h1>🏸 无限进步球场 · 快乐切片工作站</h1>
             <p>上传就是热身，切割就是开席；每段快乐，都值得被单独保存。</p>
+            <p id="dailyAiQuote" class="daily-quote" style="margin-top:10px;font-size:14px;color:#7a6cf4;font-weight:600;min-height:22px;transition:all .3s;">
+                <span style="display:inline-block;animation:spin 1s linear infinite;">⏳</span> AI 正在为今天的打球运势占一卦…
+            </p>
             <a class="guide-link" href="/guide">📖 《如何优雅地打出一盘名场面》</a>
         </div>
 
@@ -1714,6 +1752,14 @@
                         <span class="emoji-cell"><button type="button" class="emoji-btn" data-emoji="🚀" title="无限进步冲鸭">🚀</button><span class="emoji-label">无限进步</span></span>
                         <span class="emoji-cell"><button type="button" class="emoji-btn" data-emoji="🎉" title="主打快乐名场面">🎉</button><span class="emoji-label">主打快乐</span></span>
                     </div>
+                    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                        <span style="font-size:13px;color:#777;">✍️ AI帮我写：</span>
+                        <button type="button" class="btn btn-secondary btn-xsmall" data-ai-comment-mood="funny" title="沙雕好玩">😂 搞笑</button>
+                        <button type="button" class="btn btn-secondary btn-xsmall" data-ai-comment-mood="encourage" title="鼓励打气">💪 鼓励</button>
+                        <button type="button" class="btn btn-secondary btn-xsmall" data-ai-comment-mood="serious" title="认真建议">📝 认真</button>
+                        <button type="button" class="btn btn-secondary btn-xsmall" data-ai-comment-mood="lazy" title="敷衍两句">😴 划水</button>
+                        <span id="aiCommentLoading" style="font-size:13px;color:#7a6cf4;display:none;">⏳ 正在编一个能让评论区破防的段子…</span>
+                    </div>
                     <div class="comment-submit-row">
                         <span class="comment-counter"><span id="commentCounter">0</span> / 500</span>
                         <button type="button" class="btn btn-primary btn-small" id="commentSubmitBtn">发送留言 🚀</button>
@@ -1805,8 +1851,10 @@
                 不填我就默认用你的登录昵称啦。
             </div>
             <div class="input-row">
-                <input type="text" id="taskNameInput" placeholder="例如：张三 · 周三晚场 vs 李哥" maxlength="40" autocomplete="off">
+                <input type="text" id="taskNameInput" placeholder="例如：张三 · 周三晚场 vs 李哥" maxlength="40" autocomplete="off" style="flex:1;">
+                <button type="button" id="aiTaskNamesBtn" class="btn btn-secondary" style="margin-left:8px;flex-shrink:0;font-size:13px;min-width:120px;" title="AI帮我想3个名字">✨ AI 帮我想名</button>
             </div>
+            <div id="aiTaskNamesTips" style="margin-top:8px;display:none;gap:8px;flex-wrap:wrap;"></div>
             <div class="input-row" style="margin-top:8px;">
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#666;">
                     <input type="checkbox" id="isPrivateCheckbox">
@@ -2284,7 +2332,23 @@
                     }
                     saveAuth(pendingWechatName, data.token, data.user && data.user.is_admin);
                     closeIdentityModal();
-                    showSuccessToast(`${pendingWechatName}，欢迎回来！今晚打球开心哦 🏸`);
+                    (async () => {
+                        let msg = `${pendingWechatName}，欢迎回来！今晚打球开心哦 🏸`;
+                        try {
+                            const r = await fetch(safeApiUrl(`/api/ai/daily-quote?name=${encodeURIComponent(pendingWechatName)}`), FETCH_OPTIONS_BASE);
+                            const d = await r.json();
+                            if (d && d.quote) {
+                                msg = d.quote;
+                                const qe = document.getElementById('dailyAiQuote');
+                                if (qe && d.quote) {
+                                    qe.innerHTML = `🏸 <span id="aiQuoteText"></span>${d.weekday ? ` <span style="color:#999;font-weight:400;margin-left:8px;font-size:12px;">· ${d.weekday}限定</span>` : ''}`;
+                                    const t = document.getElementById('aiQuoteText');
+                                    if (t) t.textContent = d.quote;
+                                }
+                            }
+                        } catch(e) {}
+                        showSuccessToast(msg);
+                    })();
                     loadHistory();
                     loadComments();
                 } catch (e) {
@@ -3219,6 +3283,8 @@
                 const thumbHtml = thumbUrl
                     ? `<div class="output-thumb"><img src="${thumbUrl}" alt="封面" loading="lazy"></div>`
                     : `<div class="output-thumb">🎬</div>`;
+                const score = (file.excitement_score == null ? stars/5 : file.excitement_score);
+                const durSec = Math.max(1, Math.round(file.duration || 0));
                 return `
                     <div class="output-item">
                         <input type="checkbox" class="item-checkbox" data-url="${escapeHtml(file.url)}" data-name="${escapeHtml(file.name)}" ${checked}>
@@ -3234,6 +3300,17 @@
                                 </span>
                                 <span class="excitement-stars">${starHtml}</span>
                             </div>
+                            <div class="ai-caption-row" style="margin-top:6px;display:none;align-items:center;gap:6px;flex-wrap:wrap;">
+                                <div class="ai-caption-text" style="flex:1;min-width:160px;font-size:13px;color:#444;padding:6px 8px;background:#faf7ff;border:1px solid #e4defb;border-radius:8px;line-height:1.5;"></div>
+                                <button type="button" class="ai-caption-copy btn btn-secondary btn-xsmall" title="复制文案" style="display:none;">📋 复制</button>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-xsmall ai-caption-btn" 
+                                data-seg-idx="${idx+1}" 
+                                data-duration-s="${durSec}" 
+                                data-score="${score.toFixed(2)}"
+                                data-total-segs="${files.length}"
+                                style="margin-top:6px;font-size:12px;width:fit-content;"
+                                title="AI为这段生成朋友圈/抖音文案">📝 AI写文案</button>
                         </div>
                         <a href="${fileUrl}" download="${escapeHtml(file.name)}" class="download-btn" title="单独下载这一段">
                             ⬇️
@@ -3254,9 +3331,170 @@
                 });
             });
 
+            document.querySelectorAll('.ai-caption-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const item = btn.closest('.output-item');
+                    if (!item) return;
+                    const row = item.querySelector('.ai-caption-row');
+                    const textEl = item.querySelector('.ai-caption-text');
+                    const copyBtn = item.querySelector('.ai-caption-copy');
+                    const segIdx = +(btn.getAttribute('data-seg-idx') || 1);
+                    const durationS = +(btn.getAttribute('data-duration-s') || 0);
+                    const score = +(btn.getAttribute('data-score') || 0.5);
+                    const totalSegs = +(btn.getAttribute('data-total-segs') || 1);
+                    if (row) { row.style.display = 'flex'; }
+                    if (textEl) {
+                        textEl.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;">⏳</span> AI正在为这段名场面编个骚文案…';
+                    }
+                    btn.disabled = true;
+                    const origBtn = btn.innerHTML;
+                    btn.innerHTML = '⏳ 编写中…';
+                    try {
+                        const resp = await fetch(safeApiUrl('/api/ai/caption'), {
+                            ...FETCH_OPTIONS_BASE,
+                            method: 'POST',
+                            headers: { ...getWechatHeader(), 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ seg_idx: segIdx, duration_s: durationS, score: score, total_segs: totalSegs, user_name: wechatName || '我' })
+                        });
+                        const d = await resp.json();
+                        if (d && d.caption) {
+                            if (textEl) textEl.textContent = d.caption;
+                            if (copyBtn) {
+                                copyBtn.style.display = 'inline-block';
+                                copyBtn.onclick = () => {
+                                    navigator.clipboard.writeText(d.caption).then(() => {
+                                        const t = copyBtn.innerHTML;
+                                        copyBtn.innerHTML = '✅ 已复制';
+                                        setTimeout(() => copyBtn.innerHTML = t, 1500);
+                                    }).catch(() => showWarnToast('复制失败，手动选中文本复制哦'));
+                                };
+                            }
+                        } else {
+                            if (textEl) textEl.textContent = 'AI暂时掉线了，下次再编~';
+                        }
+                    } catch (e) {
+                        if (textEl) textEl.textContent = '网络波动，文案生成失败，请重试';
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = origBtn;
+                    }
+                });
+            });
+
             if (typeof window.parseEmojiIfAble === 'function') window.parseEmojiIfAble(outputList);
             updateSelectionUI();
         }
+
+        // ===== AI Features =====
+        (function initAiFeatures() {
+            const dailyQuoteEl = document.getElementById('dailyAiQuote');
+            if (dailyQuoteEl) {
+                (async () => {
+                    try {
+                        const params = new URLSearchParams();
+                        if (wechatName) params.set('name', wechatName);
+                        const resp = await fetch(safeApiUrl('/api/ai/daily-quote') + (params.toString() ? '?' + params.toString() : ''), FETCH_OPTIONS_BASE);
+                        const d = await resp.json();
+                        if (d && d.quote) {
+                            dailyQuoteEl.innerHTML = `🏸 <span id="aiQuoteText"></span>${d.weekday ? ` <span style="color:#999;font-weight:400;margin-left:8px;font-size:12px;">· ${d.weekday}限定</span>` : ''}`;
+                            const t = document.getElementById('aiQuoteText');
+                            if (t) t.textContent = d.quote;
+                        }
+                    } catch (e) {
+                        dailyQuoteEl.textContent = '🏸 打一球有一球的欢喜，挥一拍有一拍的痛快';
+                    }
+                })();
+            }
+
+            const aiBtn = document.getElementById('aiTaskNamesBtn');
+            const aiTips = document.getElementById('aiTaskNamesTips');
+            const nameInput = document.getElementById('taskNameInput');
+            if (aiBtn && aiTips) {
+                aiBtn.addEventListener('click', async () => {
+                    aiTips.style.display = 'flex';
+                    aiTips.innerHTML = '<span style="font-size:13px;color:#7a6cf4;"><span style="display:inline-block;animation:spin 1s linear infinite;">⏳</span> AI 正在翻阅《羽毛球起名大典》…</span>';
+                    aiBtn.disabled = true;
+                    const orig = aiBtn.innerHTML;
+                    aiBtn.innerHTML = '✨ 构思中';
+                    try {
+                        const resp = await fetch(safeApiUrl('/api/ai/task-names'), {
+                            ...FETCH_OPTIONS_BASE,
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', ...getWechatHeader() },
+                            body: JSON.stringify({ user_name: wechatName || (nameInput && nameInput.value) || '神秘球友' })
+                        });
+                        const d = await resp.json();
+                        const names = (d && d.names) ? d.names.slice(0, 5) : [];
+                        if (names.length === 0) {
+                            aiTips.innerHTML = '<span style="color:#999;font-size:13px;">暂无推荐，手动填一个吧~</span>';
+                        } else {
+                            aiTips.innerHTML = '';
+                            names.forEach(n => {
+                                const chip = document.createElement('button');
+                                chip.type = 'button';
+                                chip.className = 'ai-name-chip';
+                                chip.textContent = n;
+                                chip.title = '点击填入输入框：' + n;
+                                chip.addEventListener('click', () => {
+                                    if (nameInput) {
+                                        nameInput.value = n.length > 40 ? n.slice(0, 40) : n;
+                                        document.querySelectorAll('.ai-name-chip').forEach(x => x.style.outline = '');
+                                        chip.style.outline = '2px solid #7a6cf4';
+                                        nameInput.dispatchEvent(new Event('input'));
+                                    }
+                                });
+                                aiTips.appendChild(chip);
+                            });
+                        }
+                    } catch (e) {
+                        aiTips.innerHTML = '<span style="color:#e0815c;font-size:13px;">AI 暂时掉线，换个网络试试~</span>';
+                    } finally {
+                        aiBtn.disabled = false;
+                        aiBtn.innerHTML = orig;
+                    }
+                });
+            }
+
+            const loading = document.getElementById('aiCommentLoading');
+            const ta = document.getElementById('commentContent');
+            const counter = document.getElementById('commentCounter');
+            document.querySelectorAll('[data-ai-comment-mood]').forEach(b => {
+                b.addEventListener('click', async () => {
+                    const mood = b.getAttribute('data-ai-comment-mood');
+                    const sel = document.querySelector('.comment-rating');
+                    let rating = 5;
+                    if (sel) {
+                        const a = sel.querySelector('.star.active') || sel.querySelector('button.active');
+                        if (a) rating = +(a.getAttribute('data-value') || 5);
+                    }
+                    if (loading) { loading.style.display = 'inline'; }
+                    b.disabled = true;
+                    const ot = b.innerHTML;
+                    b.innerHTML = '✨ 写着';
+                    try {
+                        const resp = await fetch(safeApiUrl('/api/ai/comment'), {
+                            ...FETCH_OPTIONS_BASE,
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', ...getWechatHeader() },
+                            body: JSON.stringify({ mood: mood, rating: rating, user_name: wechatName || '' })
+                        });
+                        const d = await resp.json();
+                        if (d && d.content && ta) {
+                            ta.value = d.content;
+                            if (counter) counter.textContent = ta.value.length;
+                            ta.style.animation = 'none'; void ta.offsetWidth; ta.style.animation = 'fadeInUp .4s ease';
+                            ta.focus();
+                        }
+                    } catch (e) {
+                        showWarnToast('AI 掉线啦，自己动手写两句吧');
+                    } finally {
+                        b.disabled = false;
+                        b.innerHTML = ot;
+                        if (loading) { loading.style.display = 'none'; }
+                    }
+                });
+            });
+        })();
 
         function updateSelectionUI() {
             const count = selectedUrls.size;
